@@ -1,0 +1,7 @@
+olist_platform:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /dbt/data/olist.duckdb
+      threads: 4

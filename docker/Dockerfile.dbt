@@ -1,0 +1,7 @@
+FROM python:3.11-slim
+
+RUN pip install --no-cache-dir dbt-core dbt-duckdb
+
+WORKDIR /dbt
+
+CMD ["bash", "-c", "dbt docs generate --project-dir /dbt --profiles-dir /dbt && dbt docs serve --host 0.0.0.0 --port 8080 --project-dir /dbt --profiles-dir /dbt --no-browser"]
