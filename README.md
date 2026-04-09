@@ -1,4 +1,4 @@
-# 🚀 Olist Data Platform — PFE Data Engineering
+# Olist Data Platform — PFE Data Engineering
 
 Plateforme de données End-to-End construite à partir du dataset **Olist** (e-commerce brésilien).  
 Couvre l'ensemble de la chaîne de valeur data : **ingestion multi-sources → stockage lakehouse → transformation → exposition analytique**.
@@ -7,7 +7,7 @@ Couvre l'ensemble de la chaîne de valeur data : **ingestion multi-sources → s
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Sources (3)            Ingestion              Storage & Processing         Serving
@@ -23,7 +23,7 @@ Sources (3)            Ingestion              Storage & Processing         Servi
 └──────────┘     └─────────────────┘          ▲ Monitoring: Prometheus/Grafana
 ```
 
-## 📊 Stack Technologique
+## Stack Technologique
 
 | Couche | Technologie | Version | Rôle |
 |---|---|---|---|
@@ -38,7 +38,7 @@ Sources (3)            Ingestion              Storage & Processing         Servi
 | Catalogue | dbt docs | — | Lineage, documentation modèles |
 | Conteneurisation | Docker Compose | v2 | Plateforme autonome Phase A |
 
-## 📁 Structure du Projet
+## Structure du Projet
 
 ```
 pfe-data-platform/
@@ -78,7 +78,7 @@ pfe-data-platform/
 └── .python-version           ← Python 3.11
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prérequis
 
@@ -130,7 +130,7 @@ cd docker
 docker-compose up -d
 ```
 
-## 🖥️ Services & Ports
+## Services & Ports
 
 | Service | URL | Credentials |
 |---|---|---|
@@ -143,21 +143,11 @@ docker-compose up -d
 | dbt docs | http://localhost:8085 | — |
 | PostgreSQL Source | localhost:5432 | admin / admin |
 
-## 🤝 Contributing
+## Contributing
 
-### Convention de branches
-
-```
-feature/[JIRA-KEY]-description    ← nouvelles fonctionnalités
-fix/[JIRA-KEY]-description        ← corrections de bugs
-```
 
 ### Convention de commits
 
-```
-[JIRA-KEY] type: description courte
-
-Exemples :
 [ESP-D1] init: setup repository and gitignore
 [ESP-D2] feat: add project structure and Python env
 [ESP-D3] infra: containerize data environment
@@ -171,7 +161,7 @@ Exemples :
 4. Merge après approbation
 5. `dev` → `main` via PR protégée
 
-## 📋 Data Guidelines
+## Data Guidelines
 
 > **Règle stricte** : aucune donnée brute ne doit être commitée dans le dépôt.
 
@@ -180,7 +170,7 @@ Exemples :
 - Aucun fichier `.csv`, `.parquet`, `.db` dans le repo
 - Aucun secret en clair — utiliser `.env` (gitignored)
 
-## 📐 Répartition des Tables Olist
+## Répartition des Tables Olist
 
 | Source | Tables | Mode d'ingestion |
 |---|---|---|
@@ -191,4 +181,3 @@ Exemples :
 ---
 
 **Auteur** : Hamza EL OUALI  
-**Encadrant** : Naoufal (Alten)
