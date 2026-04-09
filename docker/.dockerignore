@@ -1,0 +1,45 @@
+# ══════════════════════════════════════════════════════════════
+# PFE Data Platform — .dockerignore
+# ══════════════════════════════════════════════════════════════
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Data
+data/raw/
+data/processed/
+*.csv
+*.parquet
+*.db
+*.duckdb
+
+# Notebooks
+notebooks/
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Tests
+tests/
+
+# Logs
+*.log
+airflow/logs/

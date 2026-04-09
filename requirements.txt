@@ -1,0 +1,31 @@
+# ══════════════════════════════════════════════════════════════
+# PFE Data Platform — Dépendances principales (Phase A)
+# ══════════════════════════════════════════════════════════════
+
+# ─── Core Data ────────────────────────────────────────────────
+pandas==2.2.2
+duckdb==0.10.3
+pyarrow==14.0.2
+python-dotenv==1.0.1
+
+# ─── Ingestion (Apache Beam — DirectRunner) ──────────────────
+apache-beam==2.54.0
+requests==2.31.0
+psycopg2-binary==2.9.9
+
+# ─── Transformation (dbt + DuckDB) ──────────────────────────
+dbt-core==1.7.14
+dbt-duckdb==1.7.3
+
+# ─── Orchestration ──────────────────────────────────────────
+apache-airflow==2.9.1
+
+# ─── Data Quality ───────────────────────────────────────────
+great-expectations==0.18.19
+
+# ─── API Mock (FastAPI) ─────────────────────────────────────
+fastapi==0.111.0
+uvicorn==0.29.0
+
+# ─── Storage Client ─────────────────────────────────────────
+minio==7.2.5

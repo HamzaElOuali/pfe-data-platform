@@ -1,0 +1,42 @@
+# prometheus.yml — Configuration de scraping Prometheus
+
+global:
+  scrape_interval: 15s          # Fréquence de collecte par défaut
+  evaluation_interval: 15s      # Fréquence d'évaluation des règles
+  scrape_timeout: 10s
+
+scrape_configs:
+
+  # ── Prometheus lui-même ──────────────────────────
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ── FastAPI Mock ─────────────────────────────────
+  - job_name: "fastapi-mock"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["fastapi_mock:80"]
+
+  # ── Kafka (via JMX Exporter si configuré) ────────
+  # - job_name: "kafka"
+  #   static_configs:
+  #     - targets: ["kafka:7071"]
+
+  # ── Airflow ──────────────────────────────────────
+  # - job_name: "airflow"
+  #   metrics_path: /admin/metrics
+  #   static_configs:
+  #     - targets: ["airflow_webserver:8080"]
+
+  # ── Trino ────────────────────────────────────────
+  # - job_name: "trino"
+  #   metrics_path: /v1/info
+  #   static_configs:
+  #     - targets: ["trino:8080"]
+
+  # ── MinIO ────────────────────────────────────────
+  - job_name: "minio"
+    metrics_path: /minio/v2/metrics/cluster
+    static_configs:
+      - targets: ["minio:9000"]
