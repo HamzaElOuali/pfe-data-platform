@@ -1,7 +1,7 @@
-olist_platform:
+ecommerce_platform:
   target: dev
   outputs:
     dev:
       type: duckdb
-      path: /dbt/data/olist.duckdb
+      path: /dbt/data/ecommerce.duckdb
       threads: 4

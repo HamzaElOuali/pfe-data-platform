@@ -46,7 +46,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_SOURCE_PASSWORD}
       POSTGRES_DB: ${POSTGRES_SOURCE_DB}
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - postgres_source_data:/var/lib/postgresql/data
     healthcheck:
@@ -75,29 +75,26 @@ services:
     restart: unless-stopped
 
   # ══════════════════════════════════════════════════
-  # LAYER 2 — STORAGE (Data Lake Bronze)
+  # LAYER 2 — STORAGE (Data Lake Bronze / Postgres DWH)
   # ══════════════════════════════════════════════════
 
-  minio:
-    image: minio/minio:latest
-    container_name: minio
-    ports:
-      - "9100:9000"
-      - "9101:9001"
-    # Utilisation de env_file pour les clés d'accès MinIO
-    env_file:
-      - ../.env
+  postgres_dwh:
+    image: postgres:15
+    container_name: postgres_dwh
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
-    command: server /data --console-address ":9001"
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: dwh_db
+    ports:
+      - "5433:5432"
     volumes:
-      - minio_data:/data
+      - postgres_dwh_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      test: [ "CMD-SHELL", "pg_isready -U admin -d dwh_db" ]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   # ══════════════════════════════════════════════════
@@ -229,7 +226,7 @@ services:
 
 volumes:
   postgres_source_data:
+  postgres_dwh_data:
   postgres_infra_data:
-  minio_data:
   prometheus_data:
   grafana_data:

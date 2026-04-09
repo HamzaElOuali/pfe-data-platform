@@ -1,6 +1,6 @@
-# 🚀 Olist Data Platform — PFE Data Engineering
+# 🚀 E-Commerce Data Platform — PFE Data Engineering
 
-Plateforme de données End-to-End construite à partir du dataset **Olist** (e-commerce brésilien).  
+Plateforme de données End-to-End construite à partir d'un dataset d'**E-commerce** type.  
 Couvre l'ensemble de la chaîne de valeur data : **ingestion multi-sources → stockage lakehouse → transformation → exposition analytique**.
 
 > **Phase A** — On-Premises · Architecture ELT · Docker Compose
@@ -180,7 +180,7 @@ Exemples :
 - Aucun fichier `.csv`, `.parquet`, `.db` dans le repo
 - Aucun secret en clair — utiliser `.env` (gitignored)
 
-## 📐 Répartition des Tables Olist
+## 📐 Répartition des Tables E-commerce
 
 | Source | Tables | Mode d'ingestion |
 |---|---|---|

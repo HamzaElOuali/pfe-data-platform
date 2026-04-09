@@ -1,4 +1,4 @@
 """
-PFE Data Platform — Olist E-commerce
+PFE Data Platform — E-commerce
 Package racine du projet Data.
 """
