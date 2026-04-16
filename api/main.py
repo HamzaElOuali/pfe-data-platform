@@ -21,7 +21,7 @@ def get_paginated_data(filepath: str, page: int, size: int):
     # Lecture du CSV avec Pandas (remarque : en prod, on utiliserait une BDD)
     df = pd.read_csv(filepath)
     # Remplacer les valeurs NaN par None pour compatibilité JSON
-    df = df.where(pd.notnull(df), None)
+    df = df.astype(object).where(pd.notnull(df), None)
     
     total_records = len(df)
     total_pages = math.ceil(total_records / size)

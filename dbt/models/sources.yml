@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: bronze
+    schema: bronze
+    database: postgres_db  # Nom de l'attachement défini dans profiles.yml
+    tables:
+      - name: geolocation
+      - name: product_category_name_translation
+      - name: orders
+      - name: customers
+      - name: order_items
+      - name: order_payments
+      - name: order_reviews
+      - name: products
+      - name: sellers

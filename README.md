@@ -1,194 +1,161 @@
 # 🚀 E-Commerce Data Platform — PFE Data Engineering
 
-Plateforme de données End-to-End construite à partir d'un dataset d'**E-commerce** type.  
-Couvre l'ensemble de la chaîne de valeur data : **ingestion multi-sources → stockage lakehouse → transformation → exposition analytique**.
-
-> **Phase A** — On-Premises · Architecture ELT · Docker Compose
+Industrial-grade, end-to-end data platform designed for a high-performance E-commerce environment. This project implements a **Medallion Architecture (Bronze/Silver)** with a strategic separation of storage and compute to ensure scalability, data quality, and observability.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture: Strategic Separation of Concerns
 
+Our architecture leverages **PostgreSQL** for persistent storage (Landing/Bronze) and **DuckDB** as a high-performance OLAP engine for transformations (Silver).
+
+```mermaid
+graph TD
+    subgraph Sources
+        S1[CSV Legacy Files]
+        S2[PostgreSQL OLTP]
+        S3[FastAPI REST Service]
+    end
+
+    subgraph "Ingestion (Apache Beam)"
+        P1[CSV Pipeline]
+        P2[JDBC/DB Pipeline]
+        P3[REST/API Pipeline]
+    end
+
+    subgraph "Storage & Compute (PostgreSQL + DuckDB)"
+        B[(PostgreSQL Bronze)]
+        D[DuckDB Compute Engine]
+        S[(PostgreSQL Silver)]
+        DBT[dbt Core]
+    end
+
+    subgraph "Observability & Serving"
+        AF[Apache Airflow]
+        DQ[Data Quality Reporter]
+        G[Grafana Dashboards]
+    end
+
+    S1 --> P1 --> B
+    S2 --> P2 --> B
+    S3 --> P3 --> B
+
+    B -.-> D
+    D -- "SQL Transformations" --> DBT
+    DBT -- "Materialization" --> S
+
+    AF -- "Orchestrates" --> P1
+    AF -- "Orchestrates" --> DBT
+    
+    DBT -- "Validation" --> DQ
+    DQ -- "Metrics" --> S
+    S --> G
 ```
-Sources (3)            Ingestion              Storage & Processing         Serving
-┌──────────┐     ┌─────────────────┐     ┌───────────────────────────┐    ┌────────────┐
-│ CSV       │────▶│ Beam Pipeline 1 │────▶│ MinIO Bronze (Parquet)    │    │ Power BI   │
-│ (Legacy)  │     │ Full Refresh    │     │          │                │    │ DuckDB SQL │
-├──────────┤     ├─────────────────┤     │    DuckDB + dbt-core      │───▶│ ML Models  │
-│ PostgreSQL│────▶│ Beam Pipeline 2 │────▶│    Silver (Clean)         │    │ dbt docs   │
-│ (OLTP)    │     │ Incr. Watermark │     │    Gold (SSOT / KPIs)     │    └────────────┘
-├──────────┤     ├─────────────────┤     └───────────────────────────┘
-│ FastAPI   │────▶│ Beam Pipeline 3 │          ▲ Orchestration: Airflow
-│ (REST)    │     │ Full Refresh    │          ▲ Qualité: GE + dbt tests
-└──────────┘     └─────────────────┘          ▲ Monitoring: Prometheus/Grafana
-```
 
-## 📊 Stack Technologique
+---
 
-| Couche | Technologie | Version | Rôle |
-|---|---|---|---|
-| Ingestion | Apache Beam (DirectRunner) | 2.54.0 | 3 pipelines batch (CSV, JDBC, REST) |
-| Stockage | MinIO | latest | Object Store S3-compatible (Bronze) |
-| Processing | DuckDB | 0.10.3 | Moteur SQL analytique local |
-| Transformation | dbt-core + dbt-duckdb | 1.7.x | ELT Bronze → Silver → Gold |
-| Orchestration | Apache Airflow | 2.9.1 | DAGs, scheduling, retry |
-| Data Quality | Great Expectations + dbt tests | 0.18.19 | Validation entrée + intégrité |
-| Monitoring | Prometheus + Grafana | latest | Observabilité infra & data |
-| API Mock | FastAPI | 0.111.0 | Simule catalogue produits & vendeurs |
-| Catalogue | dbt docs | — | Lineage, documentation modèles |
-| Conteneurisation | Docker Compose | v2 | Plateforme autonome Phase A |
+## 🌟 Core Features
 
-## 📁 Structure du Projet
+- **Multi-Source Ingestion**: Unified pipelines for CSV, SQL Databases, and REST APIs using **Apache Beam**.
+- **Medallion Architecture**:
+    - **Bronze**: Raw data landing with governance metadata (`_ingested_at`, `_batch_id`).
+    - **Silver**: Cleaned, deduplicated, and anonymized (PII hashing) "Source of Truth".
+- **Compute/Storage Synergy**: PostgreSQL handles the data weight while **DuckDB** provides lightning-fast analytical processing.
+- **Automated Data Quality**: Integrated dbt tests with a custom **DQ Reporter** that logs metrics and enforces a "Fail-Fast" policy.
+- **Enterprise Observability**: Real-time monitoring of infra and data health via **Prometheus** and **Grafana**.
 
-```
+---
+
+## 🛠️ Technology Stack
+
+| Role | Technology | Implementation |
+| :--- | :--- | :--- |
+| **Ingestion** | Apache Beam | Batch processing (CSV, JDBC, REST) |
+| **Storage** | PostgreSQL 16 | Landing (Bronze) & Serving (Silver/Gold) |
+| **Analytical Engine** | DuckDB | OLAP moteur (separation of storage/compute) |
+| **Transformation** | dbt-core + dbt-duckdb | SQL modelling, lineage, and documentation |
+| **Orchestration** | Apache Airflow | DAG scheduling and pipeline monitoring |
+| **Data Quality** | dbt tests + Custom Python | Automated validation and DQ metrics table |
+| **Observability** | Prometheus + Grafana | Infrastructure & Data Quality Dashboards |
+
+---
+
+## 📂 Project Structure
+
+```bash
 pfe-data-platform/
-├── src/                      ← Code Python source
-│   ├── ingestion/            ← Pipelines Apache Beam
-│   ├── processing/           ← Transformations, nettoyage
-│   └── utils/                ← Fonctions utilitaires partagées
-├── airflow/                  ← Orchestration Airflow
-│   ├── dags/                 ← DAGs Airflow
-│   ├── plugins/              ← Plugins customisés
-│   └── logs/                 ← Logs d'exécution (gitignored)
-├── dbt/                      ← Modèles dbt (Bronze / Silver / Gold)
-│   ├── models/
-│   ├── macros/
-│   ├── seeds/
-│   ├── profiles.yml
-│   └── dbt_project.yml
-├── data/
-│   ├── raw/                  ← Données brutes (lecture seule, gitignored)
-│   └── processed/            ← Données transformées (gitignored)
-├── api/                      ← API mock FastAPI (products, sellers)
-│   └── main.py
-├── docker/
-│   ├── docker-compose.yml    ← Orchestration des services
-│   ├── Dockerfile
-│   ├── Dockerfile.dbt
-│   └── monitoring/           ← Prometheus + Grafana config
-├── notebooks/                ← Exploration / prototypage
-├── tests/                    ← Tests pytest
-├── docs/                     ← Documentation technique
-├── Dockerfile                ← Image Airflow + dépendances Data
-├── requirements.txt          ← Dépendances Python (production)
-├── requirements-dev.txt      ← Dépendances Python (dev)
-├── .env.example              ← Template variables d'environnement
-├── .gitignore
-├── .dockerignore
-└── .python-version           ← Python 3.11
+├── airflow/            # Orchestration: DAGs and Airflow configuration
+├── api/                # Mock REST API (FastAPI) for product/seller data
+├── data/               # Raw datasets (excluded from git)
+├── dbt/                # Transformation layer: Models (Bronze/Silver), Macros
+├── docker/             # Infrastructure: Docker Compose, Prometheus/Grafana configs
+├── src/                # Python Core Logic
+│   ├── ingestion/      # Apache Beam pipelines
+│   ├── quality/        # Custom Data Quality reporting logic
+│   └── scripts/        # Utility and initialization scripts
+├── tests/              # Pytest suite for pipelines and logic
+└── requirements.txt    # Production dependencies
 ```
+
+---
 
 ## 🚀 Getting Started
 
-### Prérequis
-
+### 1. Prerequisites
 - **Python 3.11+**
-- **Docker Desktop 24+** avec Docker Compose v2
+- **Docker Desktop** (with Compose v2)
 - **Git**
 
-### 1. Cloner le dépôt
-
+### 2. Installation & Setup
 ```bash
-git clone https://github.com/<org>/pfe-data-platform.git
+# Clone the repository
+git clone https://github.com/HamzaElOuali/pfe-data-platform.git
 cd pfe-data-platform
-```
 
-### 2. Configurer l'environnement Python
+# Setup Virtual Environment
+python -m venv venv
+source venv/bin/activate  # venv\Scripts\activate on Windows
 
-```bash
-# Créer un environnement virtuel
-python -m venv .venv
-
-# Activer l'environnement
-# Windows PowerShell :
-.venv\Scripts\Activate.ps1
-# Linux / macOS :
-# source .venv/bin/activate
-
-# Installer les dépendances
+# Install Dependencies
 pip install -r requirements.txt
-pip install -r requirements-dev.txt
 ```
 
-### 3. Configurer les variables d'environnement
+### 3. Environment Configuration
+Copy the `.env.example` to `.env` and adjust the credentials for PostgreSQL and APIs.
 
-```bash
-cp .env.example .env
-# Éditer .env avec vos valeurs si nécessaire
-```
-
-### 4. Lancer les tests
-
-```bash
-python -m pytest tests/ -v
-```
-
-### 5. Lancer la plateforme Docker
-
+### 4. Launch Services
 ```bash
 cd docker
 docker-compose up -d
 ```
 
-## 🖥️ Services & Ports
+---
 
-| Service | URL | Credentials |
-|---|---|---|
-| Airflow UI | http://localhost:8080 | admin / admin |
-| MinIO Console | http://localhost:9101 | minioadmin / minioadmin |
-| FastAPI Swagger | http://localhost:8090/docs | — |
-| Prometheus | http://localhost:9090 | — |
-| Grafana | http://localhost:3000 | admin / admin |
-| pgAdmin | http://localhost:5050 | admin@admin.com / admin |
-| dbt docs | http://localhost:8085 | — |
-| PostgreSQL Source | localhost:5432 | admin / admin |
+## 📊 Data Quality & Governance
 
-## 🤝 Contributing
-
-### Convention de branches
-
-```
-feature/[JIRA-KEY]-description    ← nouvelles fonctionnalités
-fix/[JIRA-KEY]-description        ← corrections de bugs
-```
-
-### Convention de commits
-
-```
-[JIRA-KEY] type: description courte
-
-Exemples :
-[ESP-D1] init: setup repository and gitignore
-[ESP-D2] feat: add project structure and Python env
-[ESP-D3] infra: containerize data environment
-```
-
-### Processus Pull Request
-
-1. Créer une branche `feature/` depuis `dev`
-2. Commiter avec la clé Jira
-3. Ouvrir une PR vers `dev` (minimum 1 reviewer requis)
-4. Merge après approbation
-5. `dev` → `main` via PR protégée
-
-## 📋 Data Guidelines
-
-> **Règle stricte** : aucune donnée brute ne doit être commitée dans le dépôt.
-
-- `data/raw/` est en **lecture seule** — jamais modifié par les scripts
-- `data/processed/` contient les données transformées (gitignored)
-- Aucun fichier `.csv`, `.parquet`, `.db` dans le repo
-- Aucun secret en clair — utiliser `.env` (gitignored)
-
-## 📐 Répartition des Tables E-commerce
-
-| Source | Tables | Mode d'ingestion |
-|---|---|---|
-| CSV (Legacy) | `geolocation`, `category_translation` | Full Refresh |
-| PostgreSQL (OLTP) | `orders`, `order_items`, `order_payments`, `customers`, `order_reviews` | Incremental (watermark) |
-| REST API (FastAPI) | `products`, `sellers` | Full Refresh (paginé) |
+We implement a rigorous validation process:
+- **Anonymization**: PII data (Customer IDs) is hashed via SHA256 in the Silver layer.
+- **Deduplication**: Generic dbt macros ensure row-level uniqueness before materialization.
+- **DQ Scoring**: Our `dq_reporter.py` script scans dbt results to calculate a global **Data Quality Score** stored in `quality.dq_metrics`.
 
 ---
 
-**Auteur** : Hamza EL OUALI  
-**Encadrant** : Naoufal (Alten)
+## 📈 Monitoring & Observability
+
+Access the following dashboards to monitor the platform:
+- **Airflow UI**: `http://localhost:8080` (admin/admin)
+- **Grafana**: `http://localhost:3000` (admin/admin)
+- **pgAdmin**: `http://localhost:5050` (admin/admin)
+
+---
+
+## 🔍 Troubleshooting
+
+### My data isn't showing up in Grafana?
+1. **Case Sensitivity**: PostgreSQL is case-sensitive. Ensure all table names are lowercase in `dbt_project.yml`.
+2. **Schema Path**: Grafana needs to point specifically to `bronze` or `silver` schemas. Update the SQL Search Path in the Grafana Data Source settings.
+3. **Data Types**: Ensure temporal columns are cast to `TIMESTAMP` in dbt (required for Grafana time-series graphs).
+
+---
+
+**Author**: Hamza EL OUALI
+**Supervised by**: Naoufal (Alten)
