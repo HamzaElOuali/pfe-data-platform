@@ -70,7 +70,6 @@ Observability  : Prometheus + Grafana
 Data Quality   : Great Expectations + dbt tests + DQ Reporter
 DataOps        : GitHub Actions CI/CD
 Schema Control : PyArrow Schema Registry + Drift Detector
-```
 
 ---
 
@@ -93,7 +92,7 @@ Schema Control : PyArrow Schema Registry + Drift Detector
 
 ## Data Sources
 
-The 9 Olist tables are distributed across 3 source types to simulate real enterprise ingestion patterns:
+The 9 tables are distributed across 3 source types to simulate real enterprise ingestion patterns:
 
 | Source | Tables | Pattern | Justification |
 |---|---|---|---|
@@ -102,6 +101,7 @@ The 9 Olist tables are distributed across 3 source types to simulate real enterp
 | **FastAPI REST** | `products`, `sellers` | Full Refresh (paginated) | External catalog API, no timestamp guarantee |
 
 ---
+
 
 ## Project Structure
 
@@ -446,6 +446,5 @@ The codebase is designed for this migration from day one — no logic rewrites r
 ---
 
 ## Author
-**Hamza EL OUALI**  
 
 **Hamza EL OUALI**  
