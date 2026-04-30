@@ -23,7 +23,7 @@ The architecture follows the **ELT paradigm** with a clear separation of concern
 My architecture leverages **PostgreSQL** for persistent storage (Landing/Bronze) and **DuckDB** as a high-performance OLAP engine for transformations (Silver).
 
 CROSS-CUTTING LAYER
-───────────────────
+
 Observability  : Grafana Dashboards
 Data Quality   : Great Expectations + dbt tests + DQ Reporter
 DataOps        : GitHub Actions CI/CD
@@ -45,7 +45,7 @@ Tables are created with **explicit types** defined by the PyArrow Schema Registr
 
 **Current Bronze volumes:**
 
-| Table | Rows | Source |
+| Table | Rows |
 |---|---|---|
 | geolocation | 1,000,163 |
 | product_category_name_translation | 71 |
@@ -59,17 +59,17 @@ Tables are created with **explicit types** defined by the PyArrow Schema Registr
 
 **Total: 1,550,074 rows across 9 tables.**
 
-### Silver Layer — Curated Zone
+### Silver Layer - Curated Zone
 
 Produced by dbt-core running on DuckDB via `postgres_scanner`. Each `stg_*` model applies:
 
-- **Type casting** — all timestamps, floats, and integers explicitly cast from TEXT
-- **PII masking** — `customer_id`, `customer_unique_id`, `seller_id` hashed via SHA-256; `review_comment_message` replaced by `has_comment` boolean
-- **Normalization** — city and state fields uppercased and trimmed
-- **Derived columns** — `delivery_days`, `is_late`, `total_value`, `response_hours`
-- **Business rule validation** — price ≥ 0, freight ≥ 0, review score ∈ [1,5], coordinates within Brazil bounds
-- **Deduplication** — generic `deduplicate` macro using DuckDB `QUALIFY` + `ROW_NUMBER()`
-- **NULL handling** — primary key NULLs rejected; `product_category_name` defaulted to `'unknown'`; optional timestamps preserved as NULL
+- **Type casting** : all timestamps, floats, and integers explicitly cast from TEXT
+- **PII masking** :`customer_id`, `customer_unique_id`, `seller_id` hashed via SHA-256; `review_comment_message` replaced by `has_comment` boolean
+- **Normalization** : city and state fields uppercased and trimmed
+- **Derived columns** : `delivery_days`, `is_late`, `total_value`, `response_hours`
+- **Business rule validation** : price ≥ 0, freight ≥ 0, review score ∈ [1,5], coordinates within Brazil bounds
+- **Deduplication** : generic `deduplicate` macro using DuckDB `QUALIFY` + `ROW_NUMBER()`
+- **NULL handling** : primary key NULLs rejected; `product_category_name` defaulted to `'unknown'`; optional timestamps preserved as NULL
 
 **PII policy:**
 
@@ -78,7 +78,6 @@ Produced by dbt-core running on DuckDB via `postgres_scanner`. Each `stg_*` mode
 | `customer_id` | SHA-256 hash | Hash only |
 | `customer_unique_id` | SHA-256 hash | Hash only |
 | `seller_id` | SHA-256 hash | Hash only |
-| `review_comment_message` | Replaced by `has_comment` boolean | Boolean only |
 
 ### Gold Layer — Business-Ready SSOT *(Sprint 5)*
 
