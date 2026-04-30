@@ -4,7 +4,10 @@ ValidateWithGE — DoFn Apache Beam pour la validation inline Great Expectations
 Applique des règles de validation sur chaque élément du pipeline.
 Si la validation échoue, le pipeline s'arrête (rien n'est écrit dans Bronze).
 """
+import os
+import json
 import logging
+from datetime import datetime, timezone
 import apache_beam as beam
 from src.quality.schema_registry import SCHEMAS
 
@@ -72,7 +75,6 @@ class ValidateWithGE(beam.DoFn):
                 log_dir = "logs"
                 os.makedirs(log_dir, exist_ok=True)
                 with open(os.path.join(log_dir, "ingestion_errors.jsonl"), "a") as f:
-                    import json
                     f.write(json.dumps(log_entry) + "\n")
             except Exception as le:
                 logger.warning(f"Could not write to ingestion_errors.jsonl: {le}")

@@ -5,10 +5,13 @@ with source as (
 renamed as (
     select
         geolocation_zip_code_prefix::integer as geolocation_zip_code_prefix,
+        -- Formatage propre du code postal (5 chiffres)
+        lpad(geolocation_zip_code_prefix::text, 5, '0') as zip_code_formatted,
         geolocation_lat::float as geolocation_lat,
         geolocation_lng::float as geolocation_lng,
-        upper(trim(geolocation_city)) as geolocation_city,
-        upper(trim(geolocation_state)) as geolocation_state,
+        -- Utilisation de la macro de nettoyage standard
+        {{ clean_string('geolocation_city') }} as geolocation_city,
+        {{ clean_string('geolocation_state') }} as geolocation_state,
         _ingested_at,
         _source_file
     from source

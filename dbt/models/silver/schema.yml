@@ -2,82 +2,109 @@ version: 2
 
 models:
   - name: stg_orders
+    description: "Table des commandes nettoyée et enrichie (Silver). Contient les dates de livraison et les indicateurs de retard."
     columns:
       - name: order_id
+        description: "Identifiant unique de la commande."
         tests:
           - unique
           - not_null
       - name: order_status
+        description: "Statut actuel de la commande (delivered, shipped, etc.)."
         tests:
           - accepted_values:
-              values: ['delivered', 'shipped', 'canceled', 'invoiced', 'processing', 'approved', 'unavailable', 'created']
+              values: ['DELIVERED', 'SHIPPED', 'CANCELED', 'INVOICED', 'PROCESSING', 'APPROVED', 'UNAVAILABLE', 'CREATED']
 
   - name: stg_customers
+    description: "Référentiel des clients avec PII masquées (SHA-256) et normalisation géographique."
     columns:
       - name: customer_id
+        description: "Identifiant unique du client (Haché)."
         tests:
           - unique
           - not_null
 
   - name: stg_products
+    description: "Catalogue des produits avec dimensions nettoyées et catégories normalisées."
     columns:
       - name: product_id
+        description: "Identifiant unique du produit."
         tests:
           - unique
           - not_null
 
   - name: stg_order_items
+    description: "Détails des articles par commande, incluant le prix, le fret et la valeur totale."
     columns:
       - name: order_id
+        description: "Référence à la commande."
         tests:
           - not_null
       - name: product_id
+        description: "Référence au produit."
         tests:
           - not_null
       - name: price
+        description: "Prix unitaire de l'article."
         tests:
           - dbt_utils.accepted_range:
               min_value: 0
 
   - name: stg_order_payments
+    description: "Détails des paiements par commande (type de paiement, mensualités, montant)."
     columns:
       - name: order_id
+        description: "Référence à la commande."
         tests:
           - not_null
       - name: payment_value
+        description: "Montant total payé."
         tests:
           - dbt_utils.accepted_range:
               min_value: 0
 
   - name: stg_order_reviews
+    description: "Avis des clients avec scores de satisfaction et délais de réponse. Inclut les commentaires textuels pour analyse NLP."
     columns:
       - name: review_id
+        description: "Identifiant unique de l'avis."
         tests:
           - unique
           - not_null
+      - name: review_comment_title
+        description: "Titre du commentaire (optionnel)."
+      - name: review_comment_message
+        description: "Contenu textuel du commentaire (utile pour NLP)."
       - name: review_score
+        description: "Note de satisfaction de 1 à 5."
         tests:
           - dbt_utils.accepted_range:
               min_value: 1
               max_value: 5
 
   - name: stg_sellers
+    description: "Référentiel des vendeurs avec PII masquées et localisation normalisée."
     columns:
       - name: seller_id
+        description: "Identifiant unique du vendeur (Haché)."
         tests:
           - unique
           - not_null
 
   - name: stg_geolocation
+    description: "Données de géolocalisation filtrées sur les frontières du Brésil."
     columns:
       - name: geolocation_zip_code_prefix
+        description: "Code postal (5 premiers chiffres)."
         tests:
           - unique
           - not_null
 
   - name: stg_category_translation
+    description: "Table de correspondance entre les noms de catégories (Portugais -> Anglais)."
     columns:
       - name: product_category_name
+        description: "Nom de la catégorie en portugais."
         tests:
           - unique
           - not_null

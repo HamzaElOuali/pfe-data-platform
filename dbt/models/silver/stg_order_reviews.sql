@@ -7,8 +7,11 @@ renamed as (
         review_id,
         order_id,
         review_score::integer as review_score,
-        -- PII : On ne garde pas le texte brut, seulement la présence d'un commentaire
-        case when review_comment_message is not null and len(trim(review_comment_message)) > 0 then true else false end as has_comment,
+        -- Commentaires (Démasqués pour analyse NLP future)
+        trim(review_comment_title) as review_comment_title,
+        trim(review_comment_message) as review_comment_message,
+        -- Flag pour savoir si un commentaire textuel existe
+        (review_comment_message is not null and len(trim(review_comment_message)) > 0) as has_comment,
         -- Casting dates
         review_creation_date::timestamp as review_creation_date,
         review_answer_timestamp::timestamp as review_answer_timestamp,

@@ -59,8 +59,7 @@ OLTP_TABLES = {
     },
     "orders": {
         "query": "SELECT * FROM orders",
-        "mode": "incremental",
-        "watermark_column": "order_purchase_timestamp",
+        "mode": "full_refresh",
         "pk_columns": ["order_id"],
     },
     "order_items": {

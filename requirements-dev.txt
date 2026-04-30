@@ -1,7 +1,4 @@
-# ══════════════════════════════════════════════════════════════
-# PFE Data Platform — Dépendances de développement
-# ══════════════════════════════════════════════════════════════
-
+# PFE Data Platform - Development Dependencies
 pytest==8.2.0
 black==24.4.2
 flake8==7.0.0

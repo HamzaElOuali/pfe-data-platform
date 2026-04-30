@@ -23,7 +23,7 @@ The architecture follows the **ELT paradigm** with a clear separation of concern
 My architecture leverages **PostgreSQL** for persistent storage (Landing/Bronze) and **DuckDB** as a high-performance OLAP engine for transformations (Silver).
 
 CROSS-CUTTING LAYER
-
+───────────────────
 Observability  : Grafana Dashboards
 Data Quality   : Great Expectations + dbt tests + DQ Reporter
 DataOps        : GitHub Actions CI/CD
@@ -45,7 +45,7 @@ Tables are created with **explicit types** defined by the PyArrow Schema Registr
 
 **Current Bronze volumes:**
 
-| Table | Rows |
+| Table | Rows | Source |
 |---|---|---|
 | geolocation | 1,000,163 |
 | product_category_name_translation | 71 |
@@ -59,17 +59,17 @@ Tables are created with **explicit types** defined by the PyArrow Schema Registr
 
 **Total: 1,550,074 rows across 9 tables.**
 
-### Silver Layer - Curated Zone
+### Silver Layer — Curated Zone
 
 Produced by dbt-core running on DuckDB via `postgres_scanner`. Each `stg_*` model applies:
 
-- **Type casting** : all timestamps, floats, and integers explicitly cast from TEXT
-- **PII masking** :`customer_id`, `customer_unique_id`, `seller_id` hashed via SHA-256; `review_comment_message` replaced by `has_comment` boolean
-- **Normalization** : city and state fields uppercased and trimmed
-- **Derived columns** : `delivery_days`, `is_late`, `total_value`, `response_hours`
-- **Business rule validation** : price ≥ 0, freight ≥ 0, review score ∈ [1,5], coordinates within Brazil bounds
-- **Deduplication** : generic `deduplicate` macro using DuckDB `QUALIFY` + `ROW_NUMBER()`
-- **NULL handling** : primary key NULLs rejected; `product_category_name` defaulted to `'unknown'`; optional timestamps preserved as NULL
+- **Type casting** — all timestamps, floats, and integers explicitly cast from TEXT
+- **PII masking** — `customer_id`, `customer_unique_id`, `seller_id` hashed via SHA-256; `review_comment_message` replaced by `has_comment` boolean
+- **Normalization** — city and state fields uppercased and trimmed
+- **Derived columns** — `delivery_days`, `is_late`, `total_value`, `response_hours`
+- **Business rule validation** — price ≥ 0, freight ≥ 0, review score ∈ [1,5], coordinates within Brazil bounds
+- **Deduplication** — generic `deduplicate` macro using DuckDB `QUALIFY` + `ROW_NUMBER()`
+- **NULL handling** — primary key NULLs rejected; `product_category_name` defaulted to `'unknown'`; optional timestamps preserved as NULL
 
 **PII policy:**
 
@@ -78,6 +78,7 @@ Produced by dbt-core running on DuckDB via `postgres_scanner`. Each `stg_*` mode
 | `customer_id` | SHA-256 hash | Hash only |
 | `customer_unique_id` | SHA-256 hash | Hash only |
 | `seller_id` | SHA-256 hash | Hash only |
+| `review_comment_message` | Replaced by `has_comment` boolean | Boolean only |
 
 ### Gold Layer — Business-Ready SSOT *(Sprint 5)*
 
@@ -132,6 +133,18 @@ La qualité des données est contrôlée à deux niveaux : Niveau structurel via
 | **stg_order_payments** | `accepted_range` (montant ≥ 0) | Cohérence des types de paiement |
 | **stg_order_reviews** | `accepted_range` (score entre 1 et 5) | Détection des messages vides |
 
+### Détails de la Couverture de Tests (21 points de contrôle)
+Pour garantir une fiabilité de 100% sur les données exposées, nous avons configuré une suite de **21 tests automatisés** répartis sur l'ensemble du schéma Silver :
+
+1.  **Gestion des Identifiants (14 tests)** : 
+    *   Tests d'unicité (`unique`) et de complétude (`not_null`) sur les clés primaires des tables : `orders`, `customers`, `products`, `reviews`, `sellers`, `geolocation`, et `category_translation`.
+2.  **Intégrité des Flux (3 tests)** : 
+    *   Validation `not_null` sur les clés étrangères de la table `order_items` (order_id, product_id) et `order_payments` (order_id) pour garantir que chaque ligne est rattachée à une entité parente.
+3.  **Validité des Domaines Métier (4 tests)** :
+    *   **Statuts** (`stg_orders`) : Un test `accepted_values` vérifie que les statuts appartiennent exclusivement à la liste officielle (DELIVERED, SHIPPED, etc.).
+    *   **Finance** (`stg_order_items` & `stg_order_payments`) : Deux tests `accepted_range` (min: 0) bloquent toute valeur négative sur les prix et les montants payés.
+    *   **Satisfaction** (`stg_order_reviews`) : Un test `accepted_range` (1 à 5) valide la cohérence des notes attribuées par les clients.
+
 **Rapports et Monitoring**
 *   **Rapport JSON** : Génération d’un fichier horodaté dans `data/processed/dq_reports/` pour chaque exécution.
 *   **Rapport Markdown** : Fichier `dq_report_latest.md` offrant une vue lisible avec indicateurs [PASS/FAIL].
@@ -170,7 +183,7 @@ La qualité des données est contrôlée à deux niveaux : Niveau structurel via
 pfe-data-platform/
 │
 ├── airflow/
-│   ├── dags/                        # DAG definitions (main_pipeline_dag.py) & (Kaggle_pipeline_dag.py)
+│   ├── dags/                        # DAG definitions (main_pipeline_dag.py) & (kaggle_pipeline_dag.py)
 │   ├── logs/                        # Airflow execution logs (gitignored)
 │   └── plugins/                     # Custom Airflow plugins & Sensors
 │
@@ -179,7 +192,7 @@ pfe-data-platform/
 │   └── data/                        # CSV files served by the API
 │
 ├── data/
-│   ├── raw/                         # Source CSV files — read-only
+│   ├── raw/                         # Source datasets (read-only)
 │   └── processed/
 │       ├── watermarks.json          # Incremental watermark state (gitignored)
 │       └── dq_reports/              # Quality reports (JSON, Markdown)
@@ -200,6 +213,7 @@ pfe-data-platform/
 │   ├── docker-compose.yml           # Full platform — 10 services
 │   ├── Dockerfile                   # Airflow image + Python dependencies
 │   ├── Dockerfile.dbt               # dbt-docs image (catalog on port 8085)
+│   └── monitoring/                  # Observability configs
 │       └── grafana/
 │           ├── datasources/         # PostgreSQL auto-provisioning
 │           └── dashboards/          # Data Quality dashboard (JSON)

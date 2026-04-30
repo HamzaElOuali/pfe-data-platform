@@ -7,7 +7,7 @@ renamed as (
         order_id,
         -- Masquage PII : SHA-256 sur l'ID client
         sha256(customer_id) as customer_id,
-        order_status,
+        {{ clean_string('order_status') }} as order_status,
         -- Casting explicite en TIMESTAMP
         order_purchase_timestamp::timestamp as order_purchase_timestamp,
         order_approved_at::timestamp as order_approved_at,
@@ -28,7 +28,9 @@ derived as (
         -- Calcul des délais de livraison en jours
         date_diff('day', order_purchase_timestamp, order_delivered_customer_date) as delivery_days,
         -- Indicateur de retard
-        (order_delivered_customer_date > order_estimated_delivery_date) as is_late
+        (order_delivered_customer_date > order_estimated_delivery_date) as is_late,
+        -- Calcul de l'ancienneté de la commande en jours par rapport à l'ingestion
+        date_diff('day', order_purchase_timestamp, _ingested_at::timestamp) as order_age_days
     from renamed
 )
 

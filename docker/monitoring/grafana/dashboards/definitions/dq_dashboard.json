@@ -27,7 +27,7 @@
   "panels": [
     {
       "datasource": {
-        "type": "postgres",
+        "type": "grafana-postgresql-datasource",
         "uid": "postgres_dwh_uid"
       },
       "fieldConfig": {
@@ -82,14 +82,14 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT run_at as time, quality_score as value FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 1",
+          "rawSql": "SELECT quality_score as value FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 1",
           "refId": "A"
         }
       ]
     },
     {
       "datasource": {
-        "type": "postgres",
+        "type": "grafana-postgresql-datasource",
         "uid": "postgres_dwh_uid"
       },
       "fieldConfig": {
@@ -161,7 +161,7 @@
       "targets": [
         {
           "format": "time_series",
-          "rawSql": "SELECT run_at as time, quality_score as value FROM quality.dq_metrics ORDER BY run_at ASC",
+          "rawSql": "SELECT run_at as time, quality_score as value FROM quality.dq_metrics WHERE $__timeFilter(run_at) ORDER BY run_at ASC",
           "refId": "A"
         }
       ],
@@ -170,7 +170,7 @@
     },
     {
       "datasource": {
-        "type": "postgres",
+        "type": "grafana-postgresql-datasource",
         "uid": "postgres_dwh_uid"
       },
       "gridPos": {
@@ -193,7 +193,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT run_at, total_tests, pass_count, fail_count, quality_score FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 10",
+          "rawSql": "SELECT run_at as \"Time\", total_tests as \"Total\", pass_count as \"Passed\", fail_count as \"Failed\", quality_score as \"Score %\" FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 10",
           "refId": "A"
         }
       ],

@@ -1,0 +1,29 @@
+version: 2
+
+macros:
+  - name: clean_string
+    description: "Nettoie une colonne de type string en supprimant les caractères spéciaux, en supprimant les espaces superflus (trim) et en convertissant le texte en majuscules."
+    arguments:
+      - name: column_name
+        type: string
+        description: "Le nom de la colonne à nettoyer."
+
+  - name: coalesce_default
+    description: "Remplace les valeurs nulles dans une colonne par une valeur par défaut spécifiée."
+    arguments:
+      - name: column_name
+        type: string
+        description: "Le nom de la colonne à traiter."
+      - name: default_value
+        type: string
+        description: "La valeur de remplacement si la colonne est nulle (par défaut : 'unknown')."
+
+  - name: deduplicate
+    description: "Supprime les doublons d'une table en ne gardant que la ligne la plus récente basée sur une clé primaire et un critère de tri (utilise QUALIFY de DuckDB)."
+    arguments:
+      - name: primary_key
+        type: string
+        description: "La colonne (ou expression) utilisée comme clé unique pour identifier les doublons."
+      - name: order_by
+        type: string
+        description: "Le critère de tri pour sélectionner la ligne à conserver (par défaut : '_ingested_at desc')."

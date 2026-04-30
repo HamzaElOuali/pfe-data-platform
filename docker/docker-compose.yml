@@ -14,10 +14,10 @@ x-airflow-common: &airflow-common
   env_file:
     - ../.env
   environment:
-    AIRFLOW__CORE__EXECUTOR: ${AIRFLOW__CORE__EXECUTOR}
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
-    AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES}
-    AIRFLOW__LOGGING__LOGGING_LEVEL: ${AIRFLOW__LOGGING__LOGGING_LEVEL}
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres_infra:5432/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__LOGGING__LOGGING_LEVEL: "INFO"
     AIRFLOW__METRICS__EXPOSE_CONFIG: "True"
     POSTGRES_DWH_HOST: postgres_dwh
     POSTGRES_DWH_PORT: 5432
@@ -182,6 +182,9 @@ services:
     volumes:
       - ../dbt:/dbt
       - ../data:/data
+    depends_on:
+      postgres_dwh:
+        condition: service_healthy
     restart: "no"
 
   # ══════════════════════════════════════════════════

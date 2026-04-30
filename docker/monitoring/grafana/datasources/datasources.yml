@@ -3,7 +3,7 @@ apiVersion: 1
 datasources:
   # ─── Source PostgreSQL (DWH) ───────────────────────
   - name: PostgreSQL (DWH)
-    type: postgres
+    type: grafana-postgresql-datasource
     uid: 'postgres_dwh_uid'
     url: postgres_dwh:5432
     database: dwh_db
