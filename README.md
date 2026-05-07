@@ -80,9 +80,17 @@ Produced by dbt-core running on DuckDB via `postgres_scanner`. Each `stg_*` mode
 | `seller_id` | SHA-256 hash | Hash only |
 | `review_comment_message` | Replaced by `has_comment` boolean | Boolean only |
 
-### Gold Layer — Business-Ready SSOT *(Sprint 5)*
+### Gold Layer — Business-Ready SSOT (Sprint 5)
 
-Facts, dimensions, and KPI marts built on top of Silver. Zero PII. All consumers (analysts, BI tools, ML pipelines) read exclusively from Gold.
+La couche Gold transforme les données nettoyées en **actifs décisionnels**. Elle est structurée selon deux axes :
+- **Bus Matrix (Star Schema)** : Dimensions (`dim_`) et Faits (`fct_`) conformés, optimisés pour les jointures BI.
+- **AI & Analytics Marts** : Tables larges pour le Machine Learning et Vues sémantiques pour Power BI.
+
+**Architecture de la couche Gold :**
+- **Dénormalisation intelligente** : Jointures complexes pré-calculées (ex: Haversine distance client-vendeur).
+- **Sécurité finale** : Hachage SHA-256 persistant sur les IDs sensibles.
+- **Serving Layer** : Exposition de vues métiers (`vw_`) pour supprimer toute complexité de modélisation côté Analyste.
+
 
 ## Rapport de Fin de Sprint 4 : Industrialisation de la Plateforme
 
@@ -145,6 +153,33 @@ Pour garantir une fiabilité de 100% sur les données exposées, nous avons conf
     *   **Finance** (`stg_order_items` & `stg_order_payments`) : Deux tests `accepted_range` (min: 0) bloquent toute valeur négative sur les prix et les montants payés.
     *   **Satisfaction** (`stg_order_reviews`) : Un test `accepted_range` (1 à 5) valide la cohérence des notes attribuées par les clients.
 
+## Rapport de Fin de Sprint 5 : Architecture Gold & Serving Layer
+
+L'objectif de ce sprint était d'industrialiser l'exposition des données et de préparer le terrain pour l'Intelligence Artificielle.
+
+### 1. Implémentation du Bus Matrix (Star Schema)
+Nous avons adopté une modélisation dimensionnelle (Kimball) pour garantir une "Source Unique de Vérité" (SSOT) :
+- **Dimensions** : `dim_customers` (Géo-enrichi), `dim_sellers` (Sécurisé), `dim_products` (Traduit), `dim_date`.
+- **Faits** : `fct_orders` (SLA/Logistique), `fct_order_items` (Ventes), `fct_order_reviews` (Satisfaction).
+
+### 2. Préparation à l'IA (Machine Learning Marts)
+Création de tables de "Serving" prêtes pour les algorithmes prédictifs :
+- **mart_ml_prediction_master** : Feature store consolidant 20+ variables (Distance Haversine, poids, délais, géographie).
+- **mart_customer_scoring** : Moteur de segmentation calculant des scores de risque (Churn) et des segments (VIP, At Risk) via des règles métier SQL.
+
+### 3. Analytics Serving Layer (Power BI Ready)
+Pour simplifier le travail des analystes, nous avons créé une couche de vues dénormalisées (One Big Table) :
+- `vw_sales_performance` : Analyse du CA et rentabilité.
+- `vw_logistics_sla` : Monitoring des retards et performance transporteurs.
+- `vw_customer_sentiment` : Corrélation entre logistique et satisfaction (VoC).
+- `vw_customer_risk_360` : Pilotage proactif de la rétention client.
+
+### 4. Industrialisation de l'Export
+Mise en place d'un script automatisé (`gold_exporter.py`) permettant de synchroniser les 13 actifs Gold (tables et vues) de DuckDB vers le schéma `gold` de PostgreSQL, assurant la persistance et l'accès concurrent aux données.
+
+---
+
+
 **Rapports et Monitoring**
 *   **Rapport JSON** : Génération d’un fichier horodaté dans `data/processed/dq_reports/` pour chaque exécution.
 *   **Rapport Markdown** : Fichier `dq_report_latest.md` offrant une vue lisible avec indicateurs [PASS/FAIL].
@@ -201,6 +236,7 @@ pfe-data-platform/
 │   ├── models/
 │   │   ├── silver/                  # staging models (stg_*)
 │   │   └── gold/                    # Facts, dimensions, marts
+│   │       └── analytics/           # Business Views (vw_*) for Power BI
 │   ├── macros/
 │   │   ├── clean_string.sql         # String cleaning macro
 │   │   ├── coalesce_default.sql     # Null handling macro
@@ -225,7 +261,8 @@ pfe-data-platform/
 │   │       ├── postgres_writer.py       # Reusable WriteToBronze DoFn
 │   │       └── postgres_reader.py       # Reusable ReadFromPostgres DoFn
 │   ├── processing/
-│   │   └── normalizer.py                # Imputation & Outliers management
+│   │   ├── normalizer.py                # Imputation & Outliers management
+│   │   └── gold_exporter.py             # DuckDB → PostgreSQL (Gold Sync)
 │   ├── quality/
 │   │   ├── schema_registry.py           # PyArrow schema contracts
 │   │   ├── ge_validator.py              # GE validation DoFn

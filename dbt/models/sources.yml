@@ -2,15 +2,42 @@ version: 2
 
 sources:
   - name: bronze
+    description: "Données brutes ingérées depuis PostgreSQL (Schema Bronze). Ces données sont le reflet exact des fichiers Kaggle originaux."
     schema: bronze
-    database: postgres_db  # Nom de l'attachement défini dans profiles.yml
+    database: postgres_db
     tables:
-      - name: geolocation
-      - name: product_category_name_translation
       - name: orders
+        description: "Table brute des commandes Olist."
+        columns:
+          - name: order_id
+            tests:
+              - unique
+              - not_null
+
       - name: customers
+        description: "Référentiel brut des clients."
+        columns:
+          - name: customer_id
+            tests:
+              - unique
+
       - name: order_items
+        description: "Détails des articles par commande."
+
       - name: order_payments
+        description: "Informations sur les transactions financières."
+
       - name: order_reviews
+        description: "Commentaires et scores laissés par les clients."
+
       - name: products
+        description: "Catalogue technique des produits."
+
       - name: sellers
+        description: "Référentiel des vendeurs."
+
+      - name: geolocation
+        description: "Points GPS par code postal au Brésil."
+
+      - name: product_category_name_translation
+        description: "Mapping des catégories Portugais -> Anglais."

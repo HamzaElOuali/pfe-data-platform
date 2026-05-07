@@ -1,0 +1,107 @@
+version: 2
+
+models:
+  # ══════════════════════════════════════════════════
+  # DIMENSIONS (Bus Matrix)
+  # ══════════════════════════════════════════════════
+  - name: dim_customers
+    description: "Référentiel unique des clients, enrichi par la géolocalisation agrégée. Contient 99k+ clients uniques."
+    columns:
+      - name: customer_key
+        description: "Clé primaire (ID technique client)."
+        tests:
+          - unique
+          - not_null
+      - name: customer_unique_id
+        description: "ID métier unique du client (PII - non masqué ici pour le scoring)."
+      - name: customer_city
+        description: "Ville normalisée (priorité à la table géolocalisation)."
+      - name: customer_state
+        description: "État (Code 2 lettres)."
+
+  - name: dim_sellers
+    description: "Référentiel des vendeurs avec hashing SHA-256 de l'ID pour la sécurité."
+    columns:
+      - name: seller_key
+        description: "ID vendeur hashé en SHA-256."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_products
+    description: "Catalogue produits avec noms de catégories traduits en anglais et calcul de volume."
+    columns:
+      - name: product_key
+        description: "ID unique du produit."
+        tests:
+          - unique
+          - not_null
+      - name: category_name_en
+        description: "Nom de la catégorie traduit (ex: health_beauty)."
+
+  - name: dim_date
+    description: "Dimension temporelle générée pour les analyses chronologiques (Time Intelligence)."
+    columns:
+      - name: date_key
+        description: "Clé format YYYYMMDD."
+        tests:
+          - unique
+
+  # ══════════════════════════════════════════════════
+  # FACTS (Bus Matrix)
+  # ══════════════════════════════════════════════════
+  - name: fct_orders
+    description: "Table de faits centrale pour le processus Logistique. Grain : 1 ligne par commande."
+    columns:
+      - name: order_key
+        tests:
+          - unique
+          - not_null
+      - name: is_late
+        description: "Indicateur binaire de retard par rapport à la promesse (SLA)."
+
+  - name: fct_order_items
+    description: "Table de faits pour le processus Ventes. Grain : 1 ligne par article commandé."
+    columns:
+      - name: order_item_key
+        tests:
+          - unique
+      - name: total_item_value
+        description: "Chiffre d'affaires généré par cette ligne d'article."
+
+  - name: fct_order_reviews
+    description: "Table de faits pour la Satisfaction Client. Grain : 1 ligne par avis."
+    columns:
+      - name: review_key
+        tests:
+          - unique
+
+  # ══════════════════════════════════════════════════
+  # MARTS (IA & Intelligence)
+  # ══════════════════════════════════════════════════
+  - name: mart_ml_prediction_master
+    description: "Wide Table consolidée pour l'entraînement des modèles ML. Contient les features Géo, Temps et Performance."
+    columns:
+      - name: distance_km
+        description: "Distance Haversine entre le vendeur et le client."
+
+  - name: mart_customer_scoring
+    description: "Table de serving pour la segmentation client (VIP, AT_RISK, NEUTRAL)."
+    columns:
+      - name: risk_score
+        description: "Probabilité de churn calculée selon la satisfaction et les retards."
+
+  # ══════════════════════════════════════════════════
+  # ANALYTICS VIEWS (Power BI Serving)
+  # ══════════════════════════════════════════════════
+  - name: vw_sales_performance
+    description: "Vue dénormalisée pour les dashboards de vente. Combine faits, produits et vendeurs."
+
+  - name: vw_logistics_sla
+    description: "Vue de monitoring de la performance de livraison (SLA) par région."
+
+  - name: vw_customer_sentiment
+    description: "Vue analysant la corrélation entre score de satisfaction et délais logistiques."
+
+  - name: vw_customer_risk_360
+    description: "Vue marketing 360 exposant les scores de risque IA et les segments clients."
