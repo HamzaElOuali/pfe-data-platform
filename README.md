@@ -177,6 +177,14 @@ Pour simplifier le travail des analystes, nous avons créé une couche de vues d
 ### 4. Industrialisation de l'Export
 Mise en place d'un script automatisé (`gold_exporter.py`) permettant de synchroniser les 13 actifs Gold (tables et vues) de DuckDB vers le schéma `gold` de PostgreSQL, assurant la persistance et l'accès concurrent aux données.
 
+### 5. Cloud Infrastructure & Streaming (GCP)
+L'extension de la plateforme vers le cloud permet de gérer des flux en temps réel et d'assurer une scalabilité horizontale :
+*   **Infrastructure as Code (Terraform)** : Provisioning automatisé des ressources GCP via les fichiers de configuration dans `terraform/`.
+    *   **Compute Engine** : Déploiement d'une instance VM dédiée (`e2-medium`) pour l'hébergement des services **Kafka** (broker de messages) et **Spark** (traitement de flux).
+    *   **Cloud Storage (GCS)** : Création d'un bucket sécurisé pour le stockage des checkpoints Spark et la persistance du Data Lake.
+    *   **Networking & Sécurité** : Configuration d'une IP statique et de règles de Firewall (port 9092) pour l'exposition sécurisée du broker Kafka.
+*   **Pipeline Hybride** : Architecture flexible permettant de basculer l'exécution entre un environnement local (Docker) et le Cloud (GCP) selon les besoins de performance.
+
 ---
 
 
@@ -201,6 +209,8 @@ Mise en place d'un script automatisé (`gold_exporter.py`) permettant de synchro
 | Monitoring | Grafana | latest | Data quality and infrastructure dashboards |
 | Catalog | dbt docs | — | Lineage graph, model documentation |
 | Containerization | Docker Compose v2 | — | Self-contained Phase A platform |
+| Infrastructure | Terraform | latest | Infrastructure as Code (IaC) pour GCP |
+| Cloud Provider | Google Cloud (GCP) | — | Hébergement VM, GCS Buckets et Networking |
 
 ---
 
@@ -272,6 +282,10 @@ pfe-data-platform/
 │       ├── init_bronze_schema.py        # Bronze schema initialization
 │       └── seed_oltp.py                 # Seeds source from CSV files
 │
+├── terraform/
+│   ├── main.tf                      # Ressources GCP (VM, Bucket, Firewall)
+│   ├── variables.tf                 # Configuration du projet et de la région
+│   └── terraform.tfvars             # Variables spécifiques à l'environnement
 ├── tests/                           # pytest unit and integration tests
 ├── .env.example                     # Environment variable template
 ├── requirements.txt                 # Production Python dependencies

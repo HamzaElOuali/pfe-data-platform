@@ -1,38 +1,51 @@
-import duckdb
 import os
-import logging
+import duckdb
+import pandas as pd
+from sqlalchemy import create_engine, text
+from urllib.parse import quote_plus
 from dotenv import load_dotenv
+import logging
 
 # Configuration du logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+load_dotenv()
+
+DUCKDB_PATH = os.getenv('DUCKDB_DATABASE_PATH', 'data/processed/warehouse.duckdb')
+
+def export_to_postgres(df, table_name, host, port, user, password, db):
+    """Exporte un DataFrame vers une instance PostgreSQL spécifique."""
+    try:
+        # Encodage du mot de passe pour gérer les caractères spéciaux comme '@'
+        safe_password = quote_plus(password)
+        conn_str = f"postgresql://{user}:{safe_password}@{host}:{port}/{db}"
+        db_engine = create_engine(conn_str)
+        
+        # On utilise le schéma 'gold' pour l'organisation
+        with db_engine.connect() as conn:
+            conn.execute(text("CREATE SCHEMA IF NOT EXISTS gold;"))
+            conn.commit()
+            
+        df.to_sql(
+            table_name, 
+            db_engine, 
+            schema='gold', 
+            if_exists='replace', 
+            index=False
+        )
+        logger.info(f"Successfully exported {table_name} to {host}")
+    except Exception as e:
+        logger.error(f"Error exporting {table_name} to {host}: {e}")
+
 def export_gold_to_postgres():
     """
-    Exports Gold layer tables from DuckDB to PostgreSQL.
-    Ensures the 'gold' schema exists in the destination database.
+    Exports Gold layer tables from DuckDB to PostgreSQL (Local + Cloud).
     """
-    load_dotenv()
-    
-    db_path = os.getenv('DUCKDB_DATABASE_PATH', 'data/processed/warehouse.duckdb')
-    pg_host = os.getenv('POSTGRES_DWH_HOST', 'localhost')
-    pg_port = os.getenv('POSTGRES_DWH_PORT', '5433')
-    pg_user = os.getenv('POSTGRES_DWH_USER', 'admin')
-    pg_pass = os.getenv('POSTGRES_DWH_PASSWORD', 'admin')
-    pg_db = os.getenv('POSTGRES_DWH_DB', 'dwh_db')
-
-    logger.info(f"Connecting to DuckDB: {db_path}")
-    conn = duckdb.connect(db_path)
-    
     try:
-        logger.info("Loading PostgreSQL extension...")
-        conn.execute("INSTALL postgres; LOAD postgres;")
-        
-        pg_conn_str = f"host={pg_host} port={pg_port} user={pg_user} password={pg_pass} dbname={pg_db}"
-        conn.execute(f"ATTACH '{pg_conn_str}' AS pg (TYPE postgres);")
-        
-        logger.info("Ensuring 'gold' schema exists in PostgreSQL...")
-        conn.execute("CREATE SCHEMA IF NOT EXISTS pg.gold;")
+        # 1. Connexion DuckDB
+        logger.info(f"Connecting to DuckDB: {DUCKDB_PATH}")
+        duck_conn = duckdb.connect(DUCKDB_PATH)
         
         gold_tables = [
             'dim_date', 'dim_products', 'dim_customers', 'dim_sellers',
@@ -43,16 +56,39 @@ def export_gold_to_postgres():
         ]
         
         for table in gold_tables:
-            logger.info(f"Exporting table: {table}")
-            conn.execute(f"CREATE OR REPLACE TABLE pg.gold.{table} AS SELECT * FROM {table}")
+            logger.info(f"Processing table: {table}")
+            df = duck_conn.execute(f"SELECT * FROM {table}").df()
             
-        logger.info("Data export completed successfully.")
+            # --- EXPORT 1: LOCAL POSTGRES (DOCKER) ---
+            export_to_postgres(
+                df, table,
+                os.getenv('POSTGRES_DWH_HOST', 'localhost'),
+                os.getenv('POSTGRES_DWH_PORT', '5433'),
+                os.getenv('POSTGRES_DWH_USER', 'admin'),
+                os.getenv('POSTGRES_DWH_PASSWORD', 'admin'),
+                os.getenv('POSTGRES_DWH_DB', 'dwh_db')
+            )
+            
+            # --- EXPORT 2: SUPABASE CLOUD (IF CONFIGURED) ---
+            supa_host = os.getenv('SUPABASE_HOST')
+            if supa_host:
+                logger.info(f"Syncing {table} to Supabase Cloud...")
+                export_to_postgres(
+                    df, table,
+                    supa_host,
+                    os.getenv('SUPABASE_PORT', '6543'),
+                    os.getenv('SUPABASE_USER'),
+                    os.getenv('SUPABASE_PASSWORD'),
+                    os.getenv('SUPABASE_DB', 'postgres')
+                )
+        
+        logger.info("Data export (Local + Cloud) completed successfully.")
         
     except Exception as e:
-        logger.error(f"Export failed: {str(e)}")
-        raise
+        logger.error(f"Critical error during export: {e}")
     finally:
-        conn.close()
+        if 'duck_conn' in locals():
+            duck_conn.close()
 
 if __name__ == "__main__":
     export_gold_to_postgres()

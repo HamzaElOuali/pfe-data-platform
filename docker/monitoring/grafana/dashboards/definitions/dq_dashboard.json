@@ -20,64 +20,44 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": 1,
+  "graphTooltip": 1,
+  "id": 10,
   "links": [],
   "liveNow": false,
   "panels": [
     {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "postgres_dwh_uid"
-      },
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "panels": [],
+      "title": "💎 PFE Platform: Global Health",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
+          "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "#EAB839",
-                "value": 85
-              },
-              {
-                "color": "green",
-                "value": 95
-              }
+              { "color": "red", "value": null },
+              { "color": "#EAB839", "value": 85 },
+              { "color": "green", "value": 95 }
             ]
           },
           "unit": "percent"
-        },
-        "overrides": []
+        }
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 0
-      },
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 1 },
       "id": 2,
       "options": {
         "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
+        "showThresholdMarkers": true
       },
-      "title": "Current Data Quality Score",
+      "title": "Global Data Quality",
       "type": "gauge",
       "targets": [
         {
@@ -88,75 +68,28 @@
       ]
     },
     {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "postgres_dwh_uid"
-      },
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
-            "axisLabel": "Quality %",
             "axisPlacement": "auto",
-            "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "line"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
+            "showPoints": "auto"
           },
           "unit": "percent"
-        },
-        "overrides": []
+        }
       },
-      "gridPos": {
-        "h": 8,
-        "w": 16,
-        "x": 8,
-        "y": 0
-      },
+      "gridPos": { "h": 7, "w": 18, "x": 6, "y": 1 },
       "id": 3,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
       },
       "targets": [
         {
@@ -165,60 +98,131 @@
           "refId": "A"
         }
       ],
-      "title": "Quality Score History",
+      "title": "DQ Score History",
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "postgres_dwh_uid"
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
-        "y": 8
-      },
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
       "id": 4,
-      "options": {
-        "footer": {
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true
+      "panels": [],
+      "title": "📦 Volume Monitoring (Bronze -> Silver -> Gold)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "unit": "short"
+        }
       },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "id": 5,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right" },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Data Growth Evolution",
+      "type": "timeseries",
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT run_at as time, row_count as value, table_name as metric FROM quality.volume_metrics WHERE $__timeFilter(run_at) ORDER BY run_at ASC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "id": 6,
+      "options": { "showHeader": true },
+      "title": "Latest Row Counts",
+      "type": "table",
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT run_at as \"Time\", total_tests as \"Total\", pass_count as \"Passed\", fail_count as \"Failed\", quality_score as \"Score %\" FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 10",
+          "rawSql": "SELECT run_at as time, schema_name, table_name, row_count FROM quality.volume_metrics WHERE $__timeFilter(run_at) ORDER BY run_at DESC LIMIT 10",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
+      "id": 7,
+      "panels": [],
+      "title": "🔍 Granular Quality by Domain",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "#EAB839", "value": 90 },
+              { "color": "green", "value": 100 }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
+      "id": 8,
+      "options": { "orientation": "horizontal", "showValue": "always" },
+      "title": "Model Quality Scores",
+      "type": "barchart",
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT domain_name as metric, quality_score as value FROM quality.dq_domain_metrics WHERE $__timeFilter(run_at) ORDER BY run_at DESC LIMIT 15",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
+      "id": 9,
+      "panels": [],
+      "title": "📜 Execution Logs",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 27 },
+      "id": 10,
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT run_at as \"Time\", total_tests as \"Total\", pass_count as \"Passed\", fail_count as \"Failed\", quality_score as \"Score %\" FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 15",
           "refId": "A"
         }
       ],
-      "title": "Recent Pipeline Runs Details",
+      "title": "Recent Pipeline History",
       "type": "table"
     }
   ],
   "refresh": "5s",
   "schemaVersion": 36,
   "style": "dark",
-  "tags": [
-    "pfe",
-    "quality"
-  ],
-  "templating": {
-    "list": []
-  },
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "E-commerce Data Platform: Quality Control",
+  "tags": ["pfe", "premium", "gold"],
+  "time": { "from": "now-30d", "to": "now" },
+  "title": "💎 PFE Platform: Premium Quality Observability",
   "uid": "dq_pfe_platform",
-  "version": 1,
-  "weekStart": ""
+  "version": 7
 }

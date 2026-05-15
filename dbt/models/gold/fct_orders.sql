@@ -15,9 +15,11 @@ payments as (
     group by 1
 ),
 
-items as (
+-- On identifie le vendeur principal par commande pour éviter les doublons de lignes
+items_agg as (
     select 
         order_id,
+        min(seller_id) as main_seller_key, -- On prend le premier vendeur
         sum(price) as total_price,
         sum(freight_value) as total_freight
     from {{ ref('stg_order_items') }}
@@ -28,6 +30,7 @@ final as (
     select
         o.order_id as order_key,
         o.customer_id as customer_key,
+        i.main_seller_key as seller_key, -- Clé ajoutée pour le BI
         strftime(o.order_purchase_timestamp, '%Y%m%d')::int as date_key,
         o.order_status,
         o.order_purchase_timestamp,
@@ -40,7 +43,7 @@ final as (
         o.is_late
     from orders o
     left join payments p on o.order_id = p.order_id
-    left join items i on o.order_id = i.order_id
+    left join items_agg i on o.order_id = i.order_id
 )
 
 select * from final

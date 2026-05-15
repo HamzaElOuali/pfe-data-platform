@@ -74,13 +74,25 @@ services:
       - "8090:80"
     volumes:
       - ../api:/app
+      - ../src:/app/src
+      - ../models:/app/models:ro
+    env_file:
+      - ../.env
+    environment:
+      MODELS_DIR: /app/models
+      POSTGRES_DWH_HOST: postgres_dwh
+      POSTGRES_DWH_PORT: 5432
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:80/health" ]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 20s
+    depends_on:
+      postgres_dwh:
+        condition: service_healthy
     restart: unless-stopped
+
 
   # ══════════════════════════════════════════════════
   # LAYER 2 — STORAGE (Data Lake Bronze / Postgres DWH)
@@ -240,6 +252,35 @@ services:
       - pgadmin_data:/var/lib/pgadmin
     ports:
       - "5050:80"
+    restart: unless-stopped
+
+  # ══════════════════════════════════════════════════
+  # LAYER 5 — ML DEMO (Streamlit)
+  # ══════════════════════════════════════════════════
+
+  streamlit:
+    image: python:3.11-slim
+    container_name: streamlit_app
+    working_dir: /app
+    command: >
+      bash -c "pip install --no-cache-dir -r requirements.txt &&
+               streamlit run app.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true"
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../streamlit_app:/app
+      - ../models:/app/models:ro
+    environment:
+      API_URL: http://fastapi_mock:80
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      fastapi-mock:
+        condition: service_healthy
     restart: unless-stopped
 
 # ══════════════════════════════════════════════════

@@ -31,9 +31,11 @@ def report_dq_score():
             break
             
     if not run_results_path:
-        print(f"ERROR: Impossible de trouver run_results.json. Chemins testés: {possible_paths}")
-        return
+        error_msg = f"CRITICAL: Impossible de trouver run_results.json. Chemins testés: {possible_paths}"
+        print(f"ERROR: {error_msg}")
+        raise FileNotFoundError(error_msg)
 
+    print(f"INFO: Reading dbt results from: {run_results_path}")
     with open(run_results_path, "r") as f:
         run_results = json.load(f)
 
@@ -57,7 +59,12 @@ def report_dq_score():
         domain = "unknown"
         for potential in ["stg_orders", "stg_customers", "stg_products", "stg_order_items", 
                           "stg_order_payments", "stg_order_reviews", "stg_sellers", 
-                          "stg_geolocation", "stg_category_translation"]:
+                          "stg_geolocation", "stg_category_translation",
+                          "dim_customers", "dim_products", "dim_sellers", "dim_date",
+                          "fct_orders", "fct_order_items", "fct_order_reviews",
+                          "mart_ml_prediction_master", "mart_customer_scoring",
+                          "vw_sales_performance", "vw_logistics_sla", 
+                          "vw_customer_sentiment", "vw_customer_risk_360"]:
             if potential in model_part:
                 domain = potential
                 break
@@ -172,27 +179,76 @@ def report_dq_score():
 
     # 5. Sauvegarder dans PostgreSQL (Métriques détaillées pour Grafana)
     try:
+        # Détection intelligente de l'hôte (Docker vs Local)
+        # Si on est dans Docker, 'postgres_dwh' est résoluble, sinon on utilise 127.0.0.1
+        host = os.getenv("POSTGRES_DWH_HOST", "127.0.0.1")
+        port = os.getenv("POSTGRES_DWH_PORT", "5433")
+        
+        # En mode Docker Airflow, le port est généralement 5432
+        if host == "postgres_dwh":
+            port = "5432"
+
+        # 5a. Connexion aux deux bases (DuckDB pour la lecture, Postgres pour le stockage)
+        import duckdb
+        
+        possible_duck_paths = [
+            os.getenv("DUCKDB_DATABASE_PATH", "data/processed/warehouse.duckdb"),
+            "data/processed/warehouse.duckdb",
+            "/opt/airflow/data/processed/warehouse.duckdb",
+            "../data/processed/warehouse.duckdb"
+        ]
+        
+        duck_path = None
+        for p in possible_duck_paths:
+            if os.path.exists(p):
+                duck_path = p
+                break
+        
+        if not duck_path:
+            print(f"WARNING: DuckDB introuvable à {possible_duck_paths}. Les volumes ne seront pas mis à jour.")
+            duck_conn = None
+        else:
+            print(f"INFO: Calcul des volumes depuis {duck_path}")
+            duck_conn = duckdb.connect(database=duck_path, read_only=True)
+        
         conn = psycopg2.connect(
-            host=os.getenv("POSTGRES_DWH_HOST"),
-            port=os.getenv("POSTGRES_DWH_PORT"),
+            host=host,
+            port=port,
             user=os.getenv("POSTGRES_DWH_USER"),
             password=os.getenv("POSTGRES_DWH_PASSWORD"),
             dbname=os.getenv("POSTGRES_DWH_DB")
         )
         with conn.cursor() as cur:
-            # 5a. Initialisation des tables de monitoring
+            # Migration : Renommer timestamp en run_at si nécessaire
+            cur.execute("""
+                DO $$ 
+                BEGIN 
+                    IF EXISTS (SELECT 1 FROM information_schema.columns 
+                               WHERE table_schema='quality' AND table_name='dq_metrics' AND column_name='timestamp') THEN
+                        ALTER TABLE quality.dq_metrics RENAME COLUMN timestamp TO run_at;
+                    END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.columns 
+                               WHERE table_schema='quality' AND table_name='dq_domain_metrics' AND column_name='timestamp') THEN
+                        ALTER TABLE quality.dq_domain_metrics RENAME COLUMN timestamp TO run_at;
+                    END IF;
+                    IF EXISTS (SELECT 1 FROM information_schema.columns 
+                               WHERE table_schema='quality' AND table_name='volume_metrics' AND column_name='timestamp') THEN
+                        ALTER TABLE quality.volume_metrics RENAME COLUMN timestamp TO run_at;
+                    END IF;
+                END $$;
+            """)
             cur.execute("""
                 CREATE SCHEMA IF NOT EXISTS quality;
                 CREATE TABLE IF NOT EXISTS quality.dq_metrics (
-                    id SERIAL PRIMARY KEY, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    id SERIAL PRIMARY KEY, run_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     pass_count INT, fail_count INT, total_tests INT, quality_score FLOAT, batch_id TEXT
                 );
                 CREATE TABLE IF NOT EXISTS quality.dq_domain_metrics (
-                    id SERIAL PRIMARY KEY, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    id SERIAL PRIMARY KEY, run_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     domain_name TEXT, pass_count INT, fail_count INT, total_tests INT, quality_score FLOAT, batch_id TEXT
                 );
                 CREATE TABLE IF NOT EXISTS quality.volume_metrics (
-                    id SERIAL PRIMARY KEY, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    id SERIAL PRIMARY KEY, run_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     schema_name TEXT, table_name TEXT, row_count INT, batch_id TEXT
                 );
             """)
@@ -214,25 +270,33 @@ def report_dq_score():
             # 5d. Capture des Volumes (Row Counts) pour le monitoring des flux
             tables_to_monitor = [
                 ("bronze", "orders"), ("bronze", "customers"), ("bronze", "products"),
-                ("silver", "stg_orders"), ("silver", "stg_customers"), ("silver", "stg_products")
+                ("silver", "stg_orders"), ("silver", "stg_customers"), ("silver", "stg_products"),
+                ("gold", "dim_customers"), ("gold", "dim_products"), ("gold", "fct_orders"),
+                ("gold", "mart_ml_prediction_master"), ("gold", "mart_customer_scoring")
             ]
-            for schema, table in tables_to_monitor:
-                try:
-                    cur.execute(f"SELECT COUNT(*) FROM {schema}.{table}")
-                    row_count = cur.fetchone()[0]
-                    cur.execute("""
-                        INSERT INTO quality.volume_metrics (schema_name, table_name, row_count, batch_id)
-                        VALUES (%s, %s, %s, %s)
-                    """, (schema, table, row_count, batch_id))
-                except Exception:
-                    conn.rollback() # Si une table n'existe pas encore, on ignore
-                    continue
+            if duck_conn:
+                for schema, table in tables_to_monitor:
+                    try:
+                        # On compte dans DuckDB
+                        row_count = duck_conn.execute(f"SELECT COUNT(*) FROM {schema}.{table}").fetchone()[0]
+                        # On insère dans Postgres
+                        cur.execute("""
+                            INSERT INTO quality.volume_metrics (schema_name, table_name, row_count, batch_id)
+                            VALUES (%s, %s, %s, %s)
+                        """, (schema, table, row_count, batch_id))
+                    except Exception as e:
+                        print(f"DEBUG: Skipping volume check for {schema}.{table}: {e}")
+                        continue
+                duck_conn.close()
+            else:
+                print("WARNING: Skipping volume checks as DuckDB is not connected.")
 
             conn.commit()
             print("SUCCESS: Métriques détaillées (DQ + Volumes) insérées dans PostgreSQL")
         conn.close()
     except Exception as e:
         print(f"ERROR: Erreur lors de l'insertion PostgreSQL : {e}")
+        raise e  # Fail the task if DB insertion fails
 
     # 5. Vérifier le seuil d'alerte (Fail-Fast)
     if quality_score < ALERT_THRESHOLD:

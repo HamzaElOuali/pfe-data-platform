@@ -3,7 +3,7 @@ ecommerce_platform:
   outputs:
     dev:
       type: duckdb
-      path: ../data/processed/warehouse.duckdb
+      path: "{{ env_var('DUCKDB_DATABASE_PATH') }}"
       extensions:
         - postgres
       # Configuration pour lire directement de PostgreSQL (Bronze)

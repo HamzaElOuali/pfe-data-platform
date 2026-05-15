@@ -12,15 +12,13 @@ customers as (
     select * from {{ ref('dim_customers') }}
 ),
 
--- On prend le premier vendeur de la commande pour simplifier la géo (Layer 1)
-order_sellers as (
+-- On agrège les items pour avoir le nombre d'articles par commande
+order_items_agg as (
     select 
         order_key,
-        seller_key,
         count(*) as nb_items
     from {{ ref('fct_order_items') }}
-    group by 1, 2
-    qualify row_number() over (partition by order_key order by nb_items desc) = 1
+    group by 1
 ),
 
 sellers as (
@@ -50,13 +48,13 @@ final as (
         c.latitude as customer_lat,
         c.longitude as customer_lon,
         
-        -- Features Géo (Vendeur)
+        -- Features Géo (Vendeur - Lien direct simplifié)
         s.seller_city,
         s.seller_state,
         s.latitude as seller_lat,
         s.longitude as seller_lon,
         
-        -- Calcul de la distance Haversine (Simplifié pour SQL)
+        -- Calcul de la distance Haversine
         6371 * acos(
             least(1, greatest(-1, 
                 cos(radians(s.latitude)) * cos(radians(c.latitude)) * 
@@ -68,9 +66,9 @@ final as (
         -- Features Commandes
         o.total_items_price,
         o.total_freight,
-        os.nb_items,
+        oi.nb_items,
         
-        -- Satisfaction (Layer 2)
+        -- Satisfaction
         coalesce(r.avg_review_score, 0) as review_score,
         
         -- TARGETS
@@ -79,8 +77,8 @@ final as (
         
     from orders o
     left join customers c on o.customer_key = c.customer_key
-    left join order_sellers os on o.order_key = os.order_key
-    left join sellers s on os.seller_key = s.seller_key
+    left join sellers s on o.seller_key = s.seller_key
+    left join order_items_agg oi on o.order_key = oi.order_key
     left join reviews r on o.order_key = r.order_key
 )
 

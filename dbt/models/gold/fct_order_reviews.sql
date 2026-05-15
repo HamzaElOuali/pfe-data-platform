@@ -10,6 +10,7 @@ with reviews as (
 orders as (
     select 
         order_id,
+        customer_id,
         order_purchase_timestamp
     from {{ ref('stg_orders') }}
 ),
@@ -18,6 +19,7 @@ final as (
     select
         r.review_id as review_key,
         r.order_id as order_key,
+        o.customer_id as customer_key, -- Clé ajoutée pour le BI
         strftime(o.order_purchase_timestamp, '%Y%m%d')::int as date_key,
         r.review_score,
         r.has_comment,

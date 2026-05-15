@@ -83,19 +83,46 @@ with DAG(
         on_success_callback=on_success_callback
     )
 
-    # 5. Tests de Qualité & Rapport
+    # 5. Tests de Qualité & Rapport Silver
     dbt_test_silver = BashOperator(
         task_id='dbt_test_silver',
         bash_command='cd /opt/airflow/dbt && dbt --log-path /tmp/dbt_logs test --select silver',
     )
 
-    dq_report = BashOperator(
-        task_id='generate_dq_report',
+    dq_report_silver = BashOperator(
+        task_id='generate_dq_report_silver',
         bash_command='export PYTHONPATH=/opt/airflow && python -m src.quality.dq_reporter',
+        on_success_callback=on_success_callback
+    )
+
+    # 6. Transformation Gold (dbt)
+    dbt_run_gold = BashOperator(
+        task_id='dbt_run_gold',
+        bash_command='cd /opt/airflow/dbt && dbt --log-path /tmp/dbt_logs run --select gold',
+        on_success_callback=on_success_callback
+    )
+
+    # 7. Tests de Qualité & Rapport Gold
+    dbt_test_gold = BashOperator(
+        task_id='dbt_test_gold',
+        bash_command='cd /opt/airflow/dbt && dbt --log-path /tmp/dbt_logs test --select gold',
+    )
+
+    dq_report_gold = BashOperator(
+        task_id='generate_dq_report_gold',
+        bash_command='export PYTHONPATH=/opt/airflow && python -m src.quality.dq_reporter',
+        on_success_callback=on_success_callback
+    )
+
+    # 8. Synchronisation vers le DWH (PostgreSQL)
+    sync_gold = BashOperator(
+        task_id='sync_gold_to_postgres',
+        bash_command='export PYTHONPATH=/opt/airflow && python -m src.processing.gold_exporter',
         on_success_callback=on_success_callback
     )
 
     # Définition des dépendances
     [check_db_source, check_api_source] >> check_drift
     check_drift >> [ingest_csv, ingest_db, ingest_api]
-    [ingest_csv, ingest_db, ingest_api] >> dbt_run_silver >> dbt_test_silver >> dq_report
+    [ingest_csv, ingest_db, ingest_api] >> dbt_run_silver >> dbt_test_silver >> dq_report_silver
+    dq_report_silver >> dbt_run_gold >> dbt_test_gold >> dq_report_gold >> sync_gold

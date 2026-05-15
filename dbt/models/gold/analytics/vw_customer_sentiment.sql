@@ -21,10 +21,10 @@ select
     o.delivery_days,
     o.is_late as was_delivered_late,
     
-    -- Client
+    -- Client (Lien direct grâce à la nouvelle clé Gold)
     c.customer_city,
     c.customer_state
 
 from reviews r
 left join orders o on r.order_key = o.order_key
-left join customers c on o.customer_key = c.customer_key
+left join customers c on r.customer_key = c.customer_key
