@@ -1,0 +1,31 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "DWH (Bronze / Silver / Gold)",
+      "Group": "PFE Data Platform",
+      "Host": "postgres_dwh",
+      "Port": 5432,
+      "MaintenanceDB": "dwh_db",
+      "Username": "admin",
+      "SSLMode": "prefer"
+    },
+    "2": {
+      "Name": "Source OLTP",
+      "Group": "PFE Data Platform",
+      "Host": "postgres_source",
+      "Port": 5432,
+      "MaintenanceDB": "oltp_db",
+      "Username": "admin",
+      "SSLMode": "prefer"
+    },
+    "3": {
+      "Name": "Infra (Airflow)",
+      "Group": "PFE Data Platform",
+      "Host": "postgres_infra",
+      "Port": 5432,
+      "MaintenanceDB": "airflow",
+      "Username": "airflow",
+      "SSLMode": "prefer"
+    }
+  }
+}

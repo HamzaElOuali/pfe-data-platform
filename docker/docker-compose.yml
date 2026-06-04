@@ -25,6 +25,7 @@ x-airflow-common: &airflow-common
     POSTGRES_SOURCE_PORT: 5432
     PYTHONPATH: /opt/airflow
     FASTAPI_MOCK_URL: http://fastapi_mock:80
+    DUCKDB_DATABASE_PATH: /opt/airflow/data/processed/warehouse.duckdb
 #  user: "50000:0"
   volumes:
     - ../airflow/dags:/opt/airflow/dags
@@ -33,6 +34,7 @@ x-airflow-common: &airflow-common
     - ../src:/opt/airflow/src
     - ../data:/opt/airflow/data
     - ../dbt:/opt/airflow/dbt
+    - ../models:/opt/airflow/models:ro
   depends_on:
     postgres_infra:
       condition: service_healthy
@@ -148,9 +150,11 @@ services:
     container_name: airflow_init
     entrypoint: [ "/bin/bash", "-c" ]
     command:
-      - "airflow db migrate && airflow users create --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PASSWORD} --firstname Admin --lastname User --role Admin --email admin@example.com || true"
+      - "airflow db migrate && airflow users create --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PASSWORD} --firstname Admin --lastname User --role Admin --email admin@example.com || true && python /opt/airflow/src/scripts/init_bronze_schema.py || true"
     depends_on:
       postgres_infra:
+        condition: service_healthy
+      postgres_dwh:
         condition: service_healthy
     restart: "no"
 
@@ -180,23 +184,13 @@ services:
 
   dbt-docs:
     build:
-      context: .
-      dockerfile: Dockerfile.dbt
+      context: ..
+      dockerfile: docker/Dockerfile.dbt
     container_name: dbt_docs
     ports:
       - "8085:8080"
-    # Chargement des variables d'environnement pour dbt
-    env_file:
-      - ../.env
-    environment:
-      POSTGRES_DWH_HOST: postgres_dwh
-      POSTGRES_DWH_PORT: 5432
     volumes:
-      - ../dbt:/dbt
       - ../data:/data
-    depends_on:
-      postgres_dwh:
-        condition: service_healthy
     restart: "no"
 
   # ══════════════════════════════════════════════════
@@ -245,39 +239,30 @@ services:
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: pgadmin
-    # Variables d'environnement pour pgAdmin
     env_file:
       - ../.env
+    environment:
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
     ports:
       - "5050:80"
     restart: unless-stopped
 
   # ══════════════════════════════════════════════════
-  # LAYER 5 — ML DEMO (Streamlit)
+  # LAYER 5 — ML DEMO (React Frontend)
   # ══════════════════════════════════════════════════
 
-  streamlit:
-    image: python:3.11-slim
-    container_name: streamlit_app
-    working_dir: /app
-    command: >
-      bash -c "pip install --no-cache-dir -r requirements.txt &&
-               streamlit run app.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true"
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8090
+    container_name: frontend_app
     ports:
-      - "8501:8501"
-    volumes:
-      - ../streamlit_app:/app
-      - ../models:/app/models:ro
-    environment:
-      API_URL: http://fastapi_mock:80
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - "3001:80"
     depends_on:
       fastapi-mock:
         condition: service_healthy

@@ -48,6 +48,7 @@ def report_dq_score():
     quality_score = (pass_count / total_tests * 100) if total_tests > 0 else 0
     batch_id = run_results.get("metadata", {}).get("invocation_id")
     timestamp = datetime.now(timezone.utc).isoformat()
+    layer = os.getenv("DQ_LAYER", "unknown")
 
     # Logique de regroupement par domaine (ex: stg_orders)
     domain_stats = {}
@@ -241,8 +242,11 @@ def report_dq_score():
                 CREATE SCHEMA IF NOT EXISTS quality;
                 CREATE TABLE IF NOT EXISTS quality.dq_metrics (
                     id SERIAL PRIMARY KEY, run_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    pass_count INT, fail_count INT, total_tests INT, quality_score FLOAT, batch_id TEXT
+                    pass_count INT, fail_count INT, total_tests INT, quality_score FLOAT, batch_id TEXT, layer TEXT
                 );
+                ALTER TABLE quality.dq_metrics ADD COLUMN IF NOT EXISTS layer TEXT;
+                UPDATE quality.dq_metrics SET layer = 'silver' WHERE layer IS NULL AND total_tests >= 20;
+                UPDATE quality.dq_metrics SET layer = 'gold'   WHERE layer IS NULL AND total_tests < 20;
                 CREATE TABLE IF NOT EXISTS quality.dq_domain_metrics (
                     id SERIAL PRIMARY KEY, run_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     domain_name TEXT, pass_count INT, fail_count INT, total_tests INT, quality_score FLOAT, batch_id TEXT
@@ -255,9 +259,9 @@ def report_dq_score():
 
             # 5b. Insertion du score Global
             cur.execute("""
-                INSERT INTO quality.dq_metrics (pass_count, fail_count, total_tests, quality_score, batch_id)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (pass_count, fail_count, total_tests, quality_score, batch_id))
+                INSERT INTO quality.dq_metrics (pass_count, fail_count, total_tests, quality_score, batch_id, layer)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (pass_count, fail_count, total_tests, quality_score, batch_id, layer))
 
             # 5c. Insertion des scores par Domaine (stg_orders, stg_customers, etc.)
             for domain, stats in domain_stats.items():
@@ -268,28 +272,43 @@ def report_dq_score():
                 """, (domain, stats["passed"], stats["total"] - stats["passed"], stats["total"], domain_score, batch_id))
 
             # 5d. Capture des Volumes (Row Counts) pour le monitoring des flux
-            tables_to_monitor = [
-                ("bronze", "orders"), ("bronze", "customers"), ("bronze", "products"),
+            # Bronze: compté directement depuis PostgreSQL (bronze schema)
+            bronze_tables = ["orders", "customers", "products", "order_items", "order_payments", "order_reviews"]
+            for table in bronze_tables:
+                try:
+                    cur.execute(f'SELECT COUNT(*) FROM bronze."{table}"')
+                    row_count = cur.fetchone()[0]
+                    cur.execute("""
+                        INSERT INTO quality.volume_metrics (schema_name, table_name, row_count, batch_id)
+                        VALUES (%s, %s, %s, %s)
+                    """, ("bronze", table, row_count, batch_id))
+                except Exception as e:
+                    print(f"DEBUG: Skipping bronze volume check for {table}: {e}")
+
+            # Silver + Gold: compté depuis DuckDB (schema main, sans préfixe)
+            duckdb_tables = [
                 ("silver", "stg_orders"), ("silver", "stg_customers"), ("silver", "stg_products"),
-                ("gold", "dim_customers"), ("gold", "dim_products"), ("gold", "fct_orders"),
-                ("gold", "mart_ml_prediction_master"), ("gold", "mart_customer_scoring")
+                ("silver", "stg_order_items"), ("silver", "stg_order_payments"),
+                ("silver", "stg_order_reviews"), ("silver", "stg_sellers"),
+                ("silver", "stg_geolocation"), ("silver", "stg_category_translation"),
+                ("gold", "dim_customers"), ("gold", "dim_products"), ("gold", "dim_sellers"),
+                ("gold", "dim_date"), ("gold", "fct_orders"), ("gold", "fct_order_items"),
+                ("gold", "fct_order_reviews"), ("gold", "mart_ml_prediction_master"),
+                ("gold", "mart_customer_scoring"),
             ]
             if duck_conn:
-                for schema, table in tables_to_monitor:
+                for schema, table in duckdb_tables:
                     try:
-                        # On compte dans DuckDB
-                        row_count = duck_conn.execute(f"SELECT COUNT(*) FROM {schema}.{table}").fetchone()[0]
-                        # On insère dans Postgres
+                        row_count = duck_conn.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
                         cur.execute("""
                             INSERT INTO quality.volume_metrics (schema_name, table_name, row_count, batch_id)
                             VALUES (%s, %s, %s, %s)
                         """, (schema, table, row_count, batch_id))
                     except Exception as e:
-                        print(f"DEBUG: Skipping volume check for {schema}.{table}: {e}")
-                        continue
+                        print(f"DEBUG: Skipping DuckDB volume check for {schema}.{table}: {e}")
                 duck_conn.close()
             else:
-                print("WARNING: Skipping volume checks as DuckDB is not connected.")
+                print("WARNING: Skipping silver/gold volume checks as DuckDB is not connected.")
 
             conn.commit()
             print("SUCCESS: Métriques détaillées (DQ + Volumes) insérées dans PostgreSQL")

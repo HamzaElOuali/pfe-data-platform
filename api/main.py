@@ -10,6 +10,7 @@ Endpoints ML (ajoutes) :
     POST /predict         — scoring en cascade d'une commande
     GET  /predict/health  — etat de sante des modeles ML
     GET  /predict/segments/stats — distribution des segments depuis PostgreSQL
+    POST /recommend       — recommandations IA via Mistral 7B (OpenRouter)
 """
 
 import math
@@ -21,12 +22,14 @@ from typing import Optional
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 # Ajouter la racine du projet au path pour importer scoring_pipeline
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.ml.scoring_pipeline import ScoringPipeline
+from ai_recommender import get_ai_recommendations
 
 # ------------------------------------------------------------------
 # Lifespan : chargement unique des modeles au demarrage
@@ -54,6 +57,13 @@ app = FastAPI(
     title="E-Commerce Intelligence API",
     description="API pour l'exposition des donnees et le scoring ML en cascade.",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # ------------------------------------------------------------------
@@ -211,16 +221,16 @@ def predict_segments_stats():
         with engine.connect() as conn:
             # Distribution des segments
             dist_query = text(
-                "SELECT customer_segment, COUNT(*) as count "
+                "SELECT segment, COUNT(*) as count "
                 "FROM quality.ml_predictions "
-                "GROUP BY customer_segment ORDER BY count DESC"
+                "GROUP BY segment ORDER BY count DESC"
             )
             dist_rows = conn.execute(dist_query).fetchall()
             distribution = {row[0]: row[1] for row in dist_rows}
 
             # 10 dernieres predictions
             recent_query = text(
-                "SELECT order_key, predicted_delay_days, churn_probability, customer_segment "
+                "SELECT order_key, predicted_delay_days, risk_proba, segment "
                 "FROM quality.ml_predictions "
                 "ORDER BY order_key DESC LIMIT 10"
             )
@@ -239,3 +249,26 @@ def predict_segments_stats():
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Erreur PostgreSQL : {exc}") from exc
+
+
+# ------------------------------------------------------------------
+# Endpoint IA — Recommandations Mistral 7B via OpenRouter
+# ------------------------------------------------------------------
+
+class RecommendRequest(BaseModel):
+    predicted_delay_days: float = Field(..., description="Delai predit en jours")
+    risk_proba: float           = Field(..., description="Probabilite de risque [0,1]")
+    segment: str                = Field(..., description="Segment client: VIP, Loyal, At Risk, Lost")
+    distance_km: float          = Field(0.0)
+    total_items_price: float    = Field(0.0)
+    review_score: float         = Field(3.0)
+    order_month: int            = Field(6)
+
+
+@app.post("/recommend")
+async def recommend(request: RecommendRequest):
+    """Genere 3 recommandations contextuelles via Mistral 7B (OpenRouter).
+    Retourne le fallback statique en cas d'erreur ou si la cle API est absente."""
+    scoring_context = request.model_dump()
+    recommendations = await get_ai_recommendations(scoring_context)
+    return {"recommendations": recommendations}

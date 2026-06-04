@@ -1,5 +1,7 @@
 # ══════════════════════════════════════════════════════════════
-# PFE Data Platform — Dépendances principales (Phase A)
+# PFE Data Platform — Dépendances Airflow (Phase A)
+# Packages compatibles avec apache-airflow==2.9.1 + numpy 1.26.x
+# Les packages ML (numpy 2.x) sont installés séparément dans le Dockerfile
 # ══════════════════════════════════════════════════════════════
 
 # ─── Core Data ────────────────────────────────────────────────
@@ -9,11 +11,11 @@ pyarrow==14.0.2
 python-dotenv==1.0.1
 
 # ─── Ingestion (Apache Beam — DirectRunner) ──────────────────
-apache-beam==2.54.0
+# >=2.56.0 supprime la contrainte numpy<1.25 de la 2.54.0
+apache-beam>=2.56.0,<2.59.0
 requests==2.31.0
 psycopg2-binary==2.9.9
-kaggle==1.6.14
-sqlalchemy==2.0.30
+sqlalchemy>=1.4.36,<2.0
 
 # ─── Transformation (dbt + DuckDB) ──────────────────────────
 dbt-core==1.7.14
@@ -22,12 +24,8 @@ dbt-duckdb==1.7.3
 # ─── Orchestration ──────────────────────────────────────────
 apache-airflow==2.9.1
 
-# ─── Data Quality ───────────────────────────────────────────
-great-expectations==0.18.19
-
-# ─── API Mock (FastAPI) ─────────────────────────────────────
-fastapi==0.111.0
-uvicorn==0.29.0
+# ─── HTTP async client (AI recommender — OpenRouter) ────────
+httpx>=0.27.0
 
 # ─── Storage Client ─────────────────────────────────────────
 minio==7.2.5

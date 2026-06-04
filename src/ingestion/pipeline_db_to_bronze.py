@@ -121,6 +121,24 @@ def add_db_metadata(element):
     return element
 
 
+def fetch_rows(query: str) -> list:
+    """Pré-fetche toutes les lignes en dehors de Beam (une seule connexion, un seul fetchall)."""
+    conn = psycopg2.connect(
+        host=os.getenv("POSTGRES_SOURCE_HOST", "localhost"),
+        port=os.getenv("POSTGRES_SOURCE_PORT", "5434"),
+        user=os.getenv("POSTGRES_SOURCE_USER", "admin"),
+        password=os.getenv("POSTGRES_SOURCE_PASSWORD", "admin"),
+        dbname=os.getenv("POSTGRES_SOURCE_DB", "oltp_db"),
+    )
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(query)
+            rows = [dict(r) for r in cur.fetchall()]
+        return rows
+    finally:
+        conn.close()
+
+
 def run():
     """Exécute le Pipeline 2 : OLTP → Bronze."""
     options = PipelineOptions(runner="DirectRunner")
@@ -131,20 +149,27 @@ def run():
     logger.info(f"Batch ID: {batch_id}")
 
     for table_name, config in OLTP_TABLES.items():
-        # Nettoyage avant ingestion si Full Refresh
         if config["mode"] == "full_refresh":
             truncate_table(table_name)
 
         query = build_query(table_name, config, watermarks)
         logger.info(f"=== Pipeline OLTP → Bronze : {table_name} ===")
-        logger.info(f"Query: {query[:120]}...")
+
+        # Pré-fetch hors Beam — une seule requête SQL, pas de DoFn reader
+        rows = fetch_rows(query)
+        logger.info(f"Fetched {len(rows):,} rows from source.")
+
+        if not rows:
+            logger.warning(f"Table {table_name} vide, skip.")
+            continue
+
+        # Ajout métadonnées avant injection dans Beam
+        rows = [add_db_metadata(r) for r in rows]
 
         with beam.Pipeline(options=options) as p:
             (
                 p
-                | f"Start_{table_name}" >> beam.Create([query])
-                | f"Read_{table_name}" >> beam.ParDo(ReadFromPostgres(query))
-                | f"Metadata_{table_name}" >> beam.Map(add_db_metadata)
+                | f"Create_{table_name}" >> beam.Create(rows)
                 | f"Validate_{table_name}" >> beam.ParDo(
                     ValidateWithGE(
                         table_name=table_name,
@@ -152,11 +177,10 @@ def run():
                     )
                 )
                 | f"Write_{table_name}" >> beam.ParDo(
-                    WriteToBronze(table_name=table_name)
+                    WriteToBronze(table_name=table_name, batch_size=5000)
                 )
             )
 
-        # Mettre à jour le watermark après succès (incremental uniquement)
         if config["mode"] == "incremental":
             watermarks[table_name] = datetime.now(timezone.utc).isoformat()
             save_watermarks(watermarks)

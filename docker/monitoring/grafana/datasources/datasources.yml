@@ -19,6 +19,7 @@ datasources:
   # ─── Source Prometheus (Metrics) ───────────────────
   - name: Prometheus
     type: prometheus
+    uid: 'prometheus_uid'
     url: http://prometheus:9090
     access: proxy
     isDefault: false

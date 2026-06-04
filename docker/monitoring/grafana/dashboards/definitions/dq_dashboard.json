@@ -3,17 +3,11 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
-        "target": {
-          "limit": 100,
-          "matchAny": false,
-          "tags": [],
-          "type": "dashboard"
-        },
         "type": "dashboard"
       }
     ]
@@ -21,16 +15,17 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 10,
+  "id": null,
   "links": [],
   "liveNow": false,
   "panels": [
+
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 1,
       "panels": [],
-      "title": "💎 PFE Platform: Global Health",
+      "title": "Pipeline Health",
       "type": "row"
     },
     {
@@ -38,6 +33,9 @@
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -47,25 +45,28 @@
             ]
           },
           "unit": "percent"
-        }
+        },
+        "overrides": []
       },
-      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 1 },
+      "gridPos": { "h": 8, "w": 5, "x": 0, "y": 1 },
       "id": 2,
       "options": {
         "orientation": "auto",
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true
+        "showThresholdMarkers": true,
+        "text": {}
       },
-      "title": "Global Data Quality",
-      "type": "gauge",
       "targets": [
         {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
           "format": "table",
           "rawSql": "SELECT quality_score as value FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 1",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Global DQ Score",
+      "type": "gauge"
     },
     {
       "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
@@ -80,19 +81,26 @@
             "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
-            "showPoints": "auto"
+            "showPoints": "auto",
+            "thresholdsStyle": { "mode": "off" }
           },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
           "unit": "percent"
-        }
+        },
+        "overrides": []
       },
-      "gridPos": { "h": 7, "w": 18, "x": 6, "y": 1 },
+      "gridPos": { "h": 8, "w": 19, "x": 5, "y": 1 },
       "id": 3,
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "single", "sort": "none" }
       },
       "targets": [
         {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
           "format": "time_series",
           "rawSql": "SELECT run_at as time, quality_score as value FROM quality.dq_metrics WHERE $__timeFilter(run_at) ORDER BY run_at ASC",
           "refId": "A"
@@ -101,67 +109,171 @@
       "title": "DQ Score History",
       "type": "timeseries"
     },
+
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
-      "id": 4,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "id": 10,
       "panels": [],
-      "title": "📦 Volume Monitoring (Bronze -> Silver -> Gold)",
+      "title": "Last Run Summary",
       "type": "row"
     },
     {
       "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": {
-            "axisPlacement": "auto",
-            "drawStyle": "line",
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2
-          },
-          "unit": "short"
-        }
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+          "unit": "none"
+        },
+        "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
-      "id": 5,
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 10 },
+      "id": 11,
       "options": {
-        "legend": { "displayMode": "table", "placement": "right" },
-        "tooltip": { "mode": "multi" }
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" , "values": false },
+        "textMode": "auto"
       },
-      "title": "Data Growth Evolution",
-      "type": "timeseries",
       "targets": [
         {
-          "format": "time_series",
-          "rawSql": "SELECT run_at as time, row_count as value, table_name as metric FROM quality.volume_metrics WHERE $__timeFilter(run_at) ORDER BY run_at ASC",
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "table",
+          "rawSql": "SELECT TO_CHAR(run_at, 'YYYY-MM-DD HH24:MI') as value FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 1",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Last Pipeline Run",
+      "type": "stat"
     },
     {
       "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
-      "id": 6,
-      "options": { "showHeader": true },
-      "title": "Latest Row Counts",
-      "type": "table",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 10 },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
       "targets": [
         {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
           "format": "table",
-          "rawSql": "SELECT run_at as time, schema_name, table_name, row_count FROM quality.volume_metrics WHERE $__timeFilter(run_at) ORDER BY run_at DESC LIMIT 10",
+          "rawSql": "SELECT total_tests as value FROM quality.dq_metrics WHERE layer = 'silver' ORDER BY run_at DESC LIMIT 1",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Silver Tests",
+      "type": "stat"
     },
     {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 10 },
+      "id": 13,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "table",
+          "rawSql": "SELECT total_tests as value FROM quality.dq_metrics WHERE layer = 'gold' ORDER BY run_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Gold Tests",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 10 },
+      "id": 14,
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "table",
+          "rawSql": "SELECT fail_count as value FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Tests Failed",
+      "type": "stat"
+    },
+
+    {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 },
-      "id": 7,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "id": 20,
       "panels": [],
-      "title": "🔍 Granular Quality by Domain",
+      "title": "Volume Monitoring",
       "type": "row"
     },
     {
@@ -169,6 +281,109 @@
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 10000 },
+              { "color": "#EAB839", "value": 100000 }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 14, "x": 0, "y": 15 },
+      "id": 21,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "/^Rows$/",
+          "values": true
+        },
+        "showUnfilled": true,
+        "text": {}
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "table",
+          "rawSql": "SELECT * FROM ((SELECT schemaname || '.' || relname as \"Table\", n_live_tup as \"Rows\" FROM pg_stat_user_tables WHERE schemaname IN ('bronze','gold') AND n_live_tup > 0) UNION ALL (SELECT 'silver.' || table_name, row_count FROM (SELECT DISTINCT ON (table_name) table_name, row_count FROM quality.volume_metrics WHERE schema_name = 'silver' ORDER BY table_name, run_at DESC) t WHERE row_count > 0)) sub ORDER BY \"Rows\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Volume Distribution : Bronze, Silver & Gold",
+      "type": "bargauge"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": false },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Layer" },
+            "properties": [
+              { "id": "custom.width", "value": 75 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Table" },
+            "properties": [
+              { "id": "custom.width", "value": 195 }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Rows" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "custom.width", "value": 120 },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } },
+              { "id": "unit", "value": "short" }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 10, "x": 14, "y": 15 },
+      "id": 22,
+      "options": {
+        "footer": { "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "table",
+          "rawSql": "SELECT * FROM ((SELECT schemaname as \"Layer\", relname as \"Table\", n_live_tup as \"Rows\" FROM pg_stat_user_tables WHERE schemaname IN ('bronze','gold') AND n_live_tup > 0) UNION ALL (SELECT 'silver', table_name, row_count FROM (SELECT DISTINCT ON (table_name) table_name, row_count FROM quality.volume_metrics WHERE schema_name = 'silver' ORDER BY table_name, run_at DESC) t WHERE row_count > 0)) sub ORDER BY \"Layer\", \"Rows\" DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Current Table Sizes (Bronze / Silver / Gold)",
+      "type": "table"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 },
+      "id": 30,
+      "panels": [],
+      "title": "Data Quality by Domain",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -178,51 +393,345 @@
             ]
           },
           "unit": "percent"
-        }
+        },
+        "overrides": []
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 18 },
-      "id": 8,
-      "options": { "orientation": "horizontal", "showValue": "always" },
-      "title": "Model Quality Scores",
-      "type": "barchart",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 25 },
+      "id": 31,
+      "options": {
+        "barRadius": 0.1,
+        "barWidth": 0.7,
+        "fillOpacity": 80,
+        "groupWidth": 0.7,
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": { "mode": "single", "sort": "none" },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100
+      },
       "targets": [
         {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
           "format": "table",
-          "rawSql": "SELECT domain_name as metric, quality_score as value FROM quality.dq_domain_metrics WHERE $__timeFilter(run_at) ORDER BY run_at DESC LIMIT 15",
+          "rawSql": "SELECT domain_name as \"Domain\", quality_score as \"Score\" FROM quality.dq_domain_metrics WHERE run_at = (SELECT MAX(run_at) FROM quality.dq_domain_metrics) ORDER BY quality_score ASC",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Quality Score by Domain (Latest Run)",
+      "type": "barchart"
     },
+
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 26 },
-      "id": 9,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "id": 40,
       "panels": [],
-      "title": "📜 Execution Logs",
+      "title": "Pipeline Execution Log",
       "type": "row"
     },
     {
       "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
-      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 27 },
-      "id": 10,
-      "options": { "showHeader": true },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": true },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Status" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "mappings", "value": [
+                { "type": "value", "options": {
+                  "PASS": { "color": "green", "index": 0, "text": "PASS" },
+                  "WARN": { "color": "#EAB839", "index": 1, "text": "WARN" },
+                  "FAIL": { "color": "red", "index": 2, "text": "FAIL" }
+                } }
+              ] }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Score %" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "lcd-gauge" },
+              { "id": "min", "value": 0 },
+              { "id": "max", "value": 100 },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "#EAB839", "value": 85 },
+                { "color": "green", "value": 95 }
+              ] } }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 35 },
+      "id": 41,
+      "options": {
+        "footer": { "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true
+      },
       "targets": [
         {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
           "format": "table",
-          "rawSql": "SELECT run_at as \"Time\", total_tests as \"Total\", pass_count as \"Passed\", fail_count as \"Failed\", quality_score as \"Score %\" FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 15",
+          "rawSql": "SELECT TO_CHAR(run_at, 'YYYY-MM-DD HH24:MI:SS') as \"Run Time\", total_tests as \"Total Tests\", pass_count as \"Passed\", fail_count as \"Failed\", ROUND(quality_score::numeric, 2) as \"Score %\", CASE WHEN quality_score >= 95 THEN 'PASS' WHEN quality_score >= 85 THEN 'WARN' ELSE 'FAIL' END as \"Status\" FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 15",
           "refId": "A"
         }
       ],
-      "title": "Recent Pipeline History",
+      "title": "Recent Pipeline Runs",
+      "type": "table"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 },
+      "id": 50,
+      "panels": [],
+      "title": "Infrastructure Health",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "type": "value", "options": { "ONLINE": { "color": "green", "index": 0, "text": "ONLINE" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 43 },
+      "id": 51,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" , "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "table",
+          "rawSql": "SELECT 'ONLINE' as value",
+          "refId": "A"
+        }
+      ],
+      "title": "PostgreSQL DWH",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "#EAB839", "value": 24 },
+              { "color": "red", "value": 48 }
+            ]
+          },
+          "unit": "h",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 43 },
+      "id": 52,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "table",
+          "rawSql": "SELECT ROUND(EXTRACT(EPOCH FROM (NOW() - MAX(run_at)))/3600, 1) as value FROM quality.dq_metrics",
+          "refId": "A"
+        }
+      ],
+      "title": "Airflow : Last Run",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "type": "value", "options": {
+              "PASS": { "color": "green", "index": 0, "text": "PASS" },
+              "FAIL": { "color": "red", "index": 1, "text": "FAIL" }
+            } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 43 },
+      "id": 53,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/.*/" , "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "table",
+          "rawSql": "SELECT CASE WHEN quality_score >= 95 THEN 'PASS' ELSE 'FAIL' END as value FROM quality.dq_metrics ORDER BY run_at DESC LIMIT 1",
+          "refId": "A"
+        }
+      ],
+      "title": "dbt : Last Run Status",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 43 },
+      "id": 54,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "table",
+          "rawSql": "SELECT SUM(n_live_tup) as value FROM pg_stat_user_tables WHERE schemaname = 'gold'",
+          "refId": "A"
+        }
+      ],
+      "title": "Gold — Total Records",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 47 },
+      "id": 55,
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "time_series",
+          "rawSql": "SELECT run_at as time, total_tests as value FROM quality.dq_metrics WHERE $__timeFilter(run_at) ORDER BY run_at ASC",
+          "refId": "A"
+        }
+      ],
+      "title": "dbt : Tests Run Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto", "filterable": false },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Schema" },
+            "properties": [ { "id": "custom.width", "value": 90 } ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Tables" },
+            "properties": [ { "id": "custom.width", "value": 80 } ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Total Rows" },
+            "properties": [
+              { "id": "custom.displayMode", "value": "color-background" },
+              { "id": "unit", "value": "short" },
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Largest Table" },
+            "properties": [ { "id": "unit", "value": "short" } ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 47 },
+      "id": 56,
+      "options": {
+        "footer": { "fields": "", "reducer": ["sum"], "show": false },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-postgresql-datasource", "uid": "postgres_dwh_uid" },
+          "format": "table",
+          "rawSql": "SELECT * FROM ((SELECT schemaname as \"Schema\", COUNT(*) as \"Tables\", SUM(n_live_tup) as \"Total Rows\", MAX(n_live_tup) as \"Largest Table\" FROM pg_stat_user_tables WHERE schemaname IN ('bronze','gold') AND n_live_tup > 0 GROUP BY schemaname) UNION ALL (SELECT 'silver', COUNT(DISTINCT table_name), SUM(row_count), MAX(row_count) FROM (SELECT DISTINCT ON (table_name) table_name, row_count FROM quality.volume_metrics WHERE schema_name = 'silver' ORDER BY table_name, run_at DESC) t)) sub ORDER BY CASE \"Schema\" WHEN 'bronze' THEN 1 WHEN 'silver' THEN 2 ELSE 3 END",
+          "refId": "A"
+        }
+      ],
+      "title": "Platform Schema Overview",
       "type": "table"
     }
+
   ],
-  "refresh": "5s",
+  "refresh": "30s",
   "schemaVersion": 36,
   "style": "dark",
-  "tags": ["pfe", "premium", "gold"],
-  "time": { "from": "now-30d", "to": "now" },
-  "title": "💎 PFE Platform: Premium Quality Observability",
+  "tags": ["pfe", "observability", "platform"],
+  "time": { "from": "now-7d", "to": "now" },
+  "title": "PFE Data Platform : Observability",
   "uid": "dq_pfe_platform",
-  "version": 7
+  "version": 8
 }

@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture Globale — E-Commerce Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --phase-a-bg:   #EBF3FF;
+  --phase-a-bdr:  #2563EB;
+  --phase-b-bg:   #FFF8E1;
+  --phase-b-bdr:  #F59E0B;
+  --bronze:       #B45309;
+  --bronze-bg:    #FEF3C7;
+  --silver:       #64748B;
+  --silver-bg:    #F1F5F9;
+  --gold:         #B45309;
+  --gold-bg:      #FFFBEB;
+  --pg:           #336791;
+  --pg-bg:        #EBF5FF;
+  --dbt:          #FF694A;
+  --dbt-bg:       #FFF0ED;
+  --airflow:      #017CEE;
+  --airflow-bg:   #EFF6FF;
+  --kafka:        #1E1E1E;
+  --kafka-bg:     #F0F0F0;
+  --gcp:          #4285F4;
+  --gcp-bg:       #E8F0FE;
+  --bq:           #4285F4;
+  --bq-bg:        #E8F4F8;
+  --beam:         #E84393;
+  --beam-bg:      #FDF2F8;
+  --duckdb:       #EBB000;
+  --duckdb-bg:    #FFFDE7;
+  --iam:          #16A34A;
+  --iam-bg:       #F0FDF4;
+  --gcs:          #0097A7;
+  --gcs-bg:       #E0F7FA;
+  --cross-bg:     #F8F4FF;
+  --cross-bdr:    #7C3AED;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #F1F3F6;
+  color: #1A1A1A;
+  padding: 28px;
+  min-width: 1500px;
+}
+
+/* ─── Header ─────────────────────────────────────────── */
+.header {
+  display: flex; align-items: center; gap: 20px;
+  background: #fff; border-radius: 14px;
+  padding: 18px 28px; margin-bottom: 20px;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+}
+.header img { height: 46px; object-fit: contain; }
+.header-divider { width: 1px; height: 40px; background: #E5E7EB; }
+.header h1 { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: #111; }
+.header p  { font-size: 12px; color: #6B7280; margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+.badge-phase {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; letter-spacing: .05em;
+}
+.badge-a { background: #DBEAFE; color: #1D4ED8; border: 1px solid #BFDBFE; }
+.badge-b { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+
+/* ─── Two-phase grid ─────────────────────────────────── */
+.phases {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* ─── Phase zone ─────────────────────────────────────── */
+.phase {
+  border-radius: 16px; padding: 20px;
+  border: 2px solid;
+}
+.phase-a { background: var(--phase-a-bg); border-color: var(--phase-a-bdr); }
+.phase-b { background: var(--phase-b-bg); border-color: var(--phase-b-bdr); }
+.phase-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; font-weight: 800; letter-spacing: -.01em;
+  margin-bottom: 18px; padding-bottom: 12px;
+  border-bottom: 2px dashed rgba(0,0,0,.12);
+}
+.phase-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+
+/* ─── Flow column ────────────────────────────────────── */
+.flow { display: flex; flex-direction: column; gap: 0; }
+.flow-row { display: flex; flex-direction: column; align-items: center; }
+.arrow-down {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 4px 0; gap: 0;
+}
+.arrow-label {
+  font-size: 9px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: #6B7280; margin-bottom: 2px;
+}
+.arrow-line {
+  width: 2px; height: 18px; background: #9CA3AF; position: relative;
+}
+.arrow-line::after {
+  content: ''; position: absolute; bottom: -6px; left: 50%;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid #9CA3AF;
+}
+.arrow-right {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 9px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: #6B7280;
+  padding: 0 4px;
+}
+.arrow-right::after {
+  content: '→'; font-size: 16px; color: #9CA3AF;
+}
+
+/* ─── Component box ──────────────────────────────────── */
+.box {
+  width: 100%; border-radius: 12px; padding: 14px 16px;
+  border: 1.5px solid; position: relative;
+}
+.box-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.box-icon {
+  width: 26px; height: 26px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.box-title { font-size: 13px; font-weight: 700; }
+.box-subtitle {
+  font-size: 10px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: #9CA3AF; margin-left: auto;
+}
+.box-body { font-size: 12px; color: #374151; line-height: 1.6; }
+.box-body ul { list-style: none; }
+.box-body ul li::before { content: '· '; color: #9CA3AF; }
+.box-body .tag {
+  display: inline-block; padding: 1px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 600; margin: 2px 2px 0 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Component colour themes */
+.box-sources  { background: #FFFFFF;          border-color: #D1D5DB; }
+.box-sources .box-icon  { background: #F3F4F6; color: #374151; }
+
+.box-ingestion{ background: #FFF7ED;           border-color: #FB923C; }
+.box-ingestion .box-icon{ background: #FED7AA; color: #C2410C; }
+
+.box-bronze   { background: var(--bronze-bg);  border-color: #F59E0B; }
+.box-bronze .box-icon   { background: #FDE68A; color: var(--bronze); }
+
+.box-duckdb   { background: var(--duckdb-bg);  border-color: var(--duckdb); }
+.box-duckdb .box-icon   { background: #FEF9C3; color: #A16207; }
+
+.box-silver   { background: var(--silver-bg);  border-color: #94A3B8; }
+.box-silver .box-icon   { background: #CBD5E1; color: #334155; }
+
+.box-gold     { background: var(--gold-bg);    border-color: #D97706; }
+.box-gold .box-icon     { background: #FDE68A; color: #92400E; }
+
+.box-pg       { background: var(--pg-bg);      border-color: var(--pg); }
+.box-pg .box-icon       { background: #BFDBFE; color: #1D4ED8; }
+
+.box-export   { background: #ECFDF5;           border-color: #10B981; }
+.box-export .box-icon   { background: #A7F3D0; color: #065F46; }
+
+.box-consumers{ background: #F5F3FF;           border-color: #8B5CF6; }
+.box-consumers .box-icon{ background: #DDD6FE; color: #5B21B6; }
+
+.box-kafka    { background: var(--kafka-bg);   border-color: #374151; }
+.box-kafka .box-icon    { background: #D1D5DB; color: #111827; }
+
+.box-dataflow { background: var(--beam-bg);    border-color: #DB2777; }
+.box-dataflow .box-icon { background: #FBCFE8; color: #9D174D; }
+
+.box-bq       { background: var(--bq-bg);      border-color: var(--gcp); }
+.box-bq .box-icon       { background: #BFDBFE; color: #1D4ED8; }
+
+.box-gcs      { background: var(--gcs-bg);     border-color: #0097A7; }
+.box-gcs .box-icon      { background: #B2EBF2; color: #006064; }
+
+.box-dbt      { background: var(--dbt-bg);     border-color: var(--dbt); }
+.box-dbt .box-icon      { background: #FED7CC; color: #9A3412; }
+
+.box-iam      { background: var(--iam-bg);     border-color: var(--iam); }
+.box-iam .box-icon      { background: #BBF7D0; color: #14532D; }
+
+.box-ecom     { background: #F0FDF4;           border-color: #22C55E; }
+.box-ecom .box-icon     { background: #BBF7D0; color: #15803D; }
+
+/* ─── Sub-zone (Silver / Gold inside DuckDB) ─────── */
+.sub-zone {
+  border-radius: 8px; padding: 10px 12px; margin-top: 8px;
+  border: 1px dashed;
+}
+.sub-zone-silver { background: var(--silver-bg); border-color: #94A3B8; }
+.sub-zone-gold   { background: var(--gold-bg);   border-color: #D97706; }
+.sub-zone-title  { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; }
+
+/* ─── Side-by-side boxes ─────────────────────────────── */
+.row-boxes { display: flex; gap: 10px; }
+.row-boxes .box { flex: 1; }
+
+/* ─── Cross-cutting ──────────────────────────────────── */
+.cross {
+  background: var(--cross-bg);
+  border: 2px solid var(--cross-bdr);
+  border-radius: 16px; padding: 20px 24px;
+}
+.cross-title {
+  font-size: 13px; font-weight: 800; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--cross-bdr);
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.cross-grid {
+  display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px;
+}
+
+/* ─── Airflow DAG ─────────────────────────────────────── */
+.dag {
+  background: var(--airflow-bg); border: 1.5px solid var(--airflow);
+  border-radius: 10px; padding: 14px 16px;
+}
+.dag-title {
+  font-size: 11px; font-weight: 700; color: var(--airflow);
+  letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.dag-flow { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.dag-node {
+  padding: 5px 10px; border-radius: 8px;
+  font-size: 10px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+  border: 1px solid;
+}
+.dag-node-sensor  { background: #FEF3C7; border-color: #F59E0B; color: #92400E; }
+.dag-node-ingest  { background: #DBEAFE; border-color: #3B82F6; color: #1D4ED8; }
+.dag-node-dbt     { background: var(--dbt-bg); border-color: var(--dbt); color: #9A3412; }
+.dag-node-dq      { background: #ECFDF5; border-color: #10B981; color: #065F46; }
+.dag-node-alert   { background: #FEE2E2; border-color: #EF4444; color: #991B1B; }
+.dag-arrow { color: #6B7280; font-size: 14px; font-weight: 700; }
+
+/* ─── Monitoring + DQ boxes ──────────────────────────── */
+.mon-box {
+  background: #fff; border: 1.5px solid #E5E7EB;
+  border-radius: 10px; padding: 14px 16px;
+}
+.mon-title { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #6B7280; margin-bottom: 10px; }
+.mon-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: 6px;
+  font-size: 12px; font-weight: 500; margin-bottom: 5px;
+  border: 1px solid var(--border, #E5E7EB);
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ─── Legend ─────────────────────────────────────────── */
+.legend {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px;
+  padding: 14px 20px; background: #fff;
+  border-radius: 12px; border: 1px solid #E5E7EB;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #4B5563; }
+.legend-dot  { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+/* Tag colours */
+.tag-pg     { background: #DBEAFE; color: #1D4ED8; }
+.tag-duck   { background: #FEF9C3; color: #A16207; }
+.tag-dbt    { background: #FFE4DC; color: #9A3412; }
+.tag-bq     { background: #E8F0FE; color: #1967D2; }
+.tag-kafka  { background: #F0F0F0; color: #374151; }
+.tag-beam   { background: #FDF2F8; color: #9D174D; }
+.tag-gcs    { background: #E0F7FA; color: #006064; }
+.tag-iam    { background: #DCFCE7; color: #166534; }
+.tag-air    { background: #EFF6FF; color: #1D4ED8; }
+.tag-sh     { background: #F5F3FF; color: #5B21B6; }
+.tag-terra  { background: #EDE9FE; color: #6D28D9; }
+
+/* Watermark batch indicator */
+.batch-badge {
+  position: absolute; top: 10px; right: 12px;
+  padding: 2px 8px; border-radius: 10px;
+  font-size: 9px; font-weight: 700; letter-spacing: .08em;
+}
+.batch-badge-a { background: #DBEAFE; color: #1E40AF; }
+.batch-badge-b { background: #FEF3C7; color: #92400E; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════ HEADER -->
+<div class="header">
+  <img src="https://www.alten.com/wp-content/uploads/2019/03/LOGO_Alten_Couleurs_Black.png" alt="ALTEN"
+    onerror="this.style.display='none'">
+  <div class="header-divider"></div>
+  <div>
+    <h1>Architecture Globale — E-Commerce Intelligence Platform</h1>
+    <p>Pipeline ELT Hybride · Phase A On-Premises (Batch) + Phase B GCP Cloud (Streaming Temps Réel)</p>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:10px;align-items:center;">
+    <span class="badge-phase badge-a">⚙ Phase A — On-Premises</span>
+    <span class="badge-phase badge-b">☁ Phase B — GCP Cloud</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ TWO PHASES -->
+<div class="phases">
+
+  <!-- ═══════════════════════════════════ PHASE A -->
+  <div class="phase phase-a">
+    <div class="phase-title">
+      <div class="phase-icon" style="background:#DBEAFE;">🖥</div>
+      PHASE A — On-Premises · Batch @daily
+      <span style="font-size:11px;font-weight:500;color:#3B82F6;margin-left:4px;">
+        Apache Airflow · PostgreSQL · DuckDB · dbt-core
+      </span>
+    </div>
+
+    <div class="flow">
+
+      <!-- Sources -->
+      <div class="flow-row">
+        <div class="box box-sources">
+          <span class="batch-badge batch-badge-a">SOURCES</span>
+          <div class="box-header">
+            <div class="box-icon" style="background:#F3F4F6;font-size:16px;">📂</div>
+            <span class="box-title">Sources Hétérogènes — Silos Simulés</span>
+          </div>
+          <div class="row-boxes">
+            <div style="flex:1;padding:8px 10px;background:#FEF9C3;border:1px solid #F59E0B;border-radius:8px;">
+              <div style="font-size:10px;font-weight:700;color:#92400E;margin-bottom:4px;">CSV LEGACY</div>
+              <div style="font-size:11px;color:#374151;">Fichiers statiques historiques<br>Dataset Olist (Kaggle)</div>
+            </div>
+            <div style="flex:1;padding:8px 10px;background:var(--pg-bg);border:1px solid var(--pg);border-radius:8px;">
+              <div style="font-size:10px;font-weight:700;color:#1D4ED8;margin-bottom:4px;">POSTGRESQL OLTP</div>
+              <div style="font-size:11px;color:#374151;">Base transactionnelle simulée<br>Données courantes E-Commerce</div>
+            </div>
+            <div style="flex:1;padding:8px 10px;background:#FFF0ED;border:1px solid #FF694A;border-radius:8px;">
+              <div style="font-size:10px;font-weight:700;color:#9A3412;margin-bottom:4px;">REST-API FastAPI</div>
+              <div style="font-size:11px;color:#374151;">Microservice HTTP paginé<br>Catalogue produits récents</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down">
+        <span class="arrow-label">COLLECT</span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- Ingestion -->
+      <div class="flow-row">
+        <div class="box box-ingestion">
+          <span class="batch-badge batch-badge-a">INGESTION</span>
+          <div class="box-header">
+            <div class="box-icon" style="background:#FED7AA;font-size:14px;font-weight:800;">B</div>
+            <span class="box-title">Apache Beam — DirectRunner</span>
+          </div>
+          <div class="box-body">
+            <div class="row-boxes" style="margin-bottom:8px;">
+              <div style="flex:1;padding:6px 10px;background:#fff;border:1px solid #E5E7EB;border-radius:6px;font-size:11px;">
+                <div style="font-weight:700;margin-bottom:2px;">Pipeline CSV</div>Full refresh · PyArrow typed
+              </div>
+              <div style="flex:1;padding:6px 10px;background:#fff;border:1px solid #E5E7EB;border-radius:6px;font-size:11px;">
+                <div style="font-weight:700;margin-bottom:2px;">Pipeline JDBC</div>Watermark incrémental
+              </div>
+              <div style="flex:1;padding:6px 10px;background:#fff;border:1px solid #E5E7EB;border-radius:6px;font-size:11px;">
+                <div style="font-weight:700;margin-bottom:2px;">Pipeline REST</div>HTTP paging paginated
+              </div>
+            </div>
+            <div style="padding:6px 10px;background:#FFF7ED;border:1px dashed #F59E0B;border-radius:6px;font-size:11px;">
+              <span style="font-weight:700;color:#C2410C;">🛡 drift_detector.py</span> — PyArrow Schema Registry · contrôle la conformité des schémas avant écriture · stratégie <strong>Fail-Fast</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down">
+        <span class="arrow-label">LOAD · _ingested_at + batch_id</span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- Bronze -->
+      <div class="flow-row">
+        <div class="box box-bronze">
+          <span class="batch-badge batch-badge-a">BRONZE</span>
+          <div class="box-header">
+            <div class="box-icon" style="font-size:15px;">🐘</div>
+            <span class="box-title">Bronze Landing Zone</span>
+            <span class="box-subtitle">postgres_dwh · schema: bronze</span>
+          </div>
+          <div class="box-body">
+            <span class="tag tag-pg">PostgreSQL 15</span>
+            <span class="tag" style="background:#FDE68A;color:#92400E;">bronze.orders</span>
+            <span class="tag" style="background:#FDE68A;color:#92400E;">bronze.customers</span>
+            <span class="tag" style="background:#FDE68A;color:#92400E;">bronze.products</span>
+            <div style="margin-top:6px;font-size:11px;color:#6B7280;">
+              Raw multi-source data · gouvernance: <code>_ingested_at</code> (UTC) + <code>batch_id</code> (UUID)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down">
+        <span class="arrow-label">TRANSFORM · postgres_scanner</span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- DuckDB Processing -->
+      <div class="flow-row">
+        <div class="box box-duckdb">
+          <span class="batch-badge batch-badge-a">PROCESSING</span>
+          <div class="box-header">
+            <div class="box-icon" style="font-size:15px;">🦆</div>
+            <span class="box-title">DuckDB Engine + dbt-core</span>
+            <span class="box-subtitle">moteur analytique in-process</span>
+          </div>
+          <div class="box-body">
+            <span class="tag tag-duck">DuckDB</span>
+            <span class="tag tag-dbt">dbt-duckdb</span>
+            <span class="tag" style="background:#F0F9FF;color:#0369A1;">postgres_scanner</span>
+
+            <!-- Silver -->
+            <div class="sub-zone sub-zone-silver" style="margin-top:10px;">
+              <div class="sub-zone-title" style="color:var(--silver);">⬡ SILVER — Clean &amp; Validated</div>
+              <ul class="box-body" style="font-size:11px;">
+                <li>🔐 PII Hashing SHA-256 (customer_id, seller_id)</li>
+                <li>📋 Casts stricts TEXT → TIMESTAMP / FLOAT / INT</li>
+                <li>🌍 Normalisation géographique (majuscules, filtrage aberrations)</li>
+                <li>💬 review_comment_message → booléen <code>has_comment</code></li>
+              </ul>
+            </div>
+
+            <!-- Gold -->
+            <div class="sub-zone sub-zone-gold" style="margin-top:8px;">
+              <div class="sub-zone-title" style="color:#B45309;">★ GOLD — Star Schema Kimball + Marts IA</div>
+              <div class="row-boxes" style="gap:6px;flex-wrap:wrap;">
+                <div style="padding:5px 8px;background:#fff;border:1px solid #F59E0B;border-radius:6px;font-size:10px;font-weight:600;">dim_customers<br>dim_products<br>dim_sellers<br>dim_date</div>
+                <div style="padding:5px 8px;background:#fff;border:1px solid #D97706;border-radius:6px;font-size:10px;font-weight:600;">fct_orders<br>fct_order_items<br>fct_order_reviews</div>
+                <div style="padding:5px 8px;background:#fff;border:1px solid #B45309;border-radius:6px;font-size:10px;font-weight:600;color:#92400E;">mart_ml_prediction_master<br>mart_customer_scoring<br>RFM + Haversine</div>
+                <div style="padding:5px 8px;background:#fff;border:1px solid #9CA3AF;border-radius:6px;font-size:10px;font-weight:600;color:#374151;">vw_sales_performance<br>vw_logistics_sla<br>vw_customer_sentiment<br>vw_customer_risk_360</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down">
+        <span class="arrow-label">EXPORT · gold_exporter.py</span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- Gold Export -->
+      <div class="flow-row">
+        <div class="box box-pg">
+          <div class="box-header">
+            <div class="box-icon" style="font-size:15px;">🐘</div>
+            <span class="box-title">PostgreSQL DWH — Schéma Gold</span>
+            <span class="box-subtitle">postgres_dwh · schema: gold</span>
+          </div>
+          <div class="box-body">
+            <span class="tag tag-pg">PostgreSQL 15</span>
+            <span class="tag" style="background:#FDE68A;color:#92400E;">schema: gold</span>
+            <span class="tag" style="background:#DCFCE7;color:#166534;">schema: quality</span>
+            <div style="margin-top:6px;font-size:11px;color:#6B7280;">
+              Accès concurrent stable · <code>quality.dq_metrics</code> · <code>quality.volume_metrics</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down">
+        <span class="arrow-label">SERVE</span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- Consumers -->
+      <div class="flow-row">
+        <div class="box box-consumers">
+          <div class="box-header">
+            <div class="box-icon" style="background:#DDD6FE;font-size:16px;">👥</div>
+            <span class="box-title">Data Consumers — Serving Layer</span>
+          </div>
+          <div class="row-boxes" style="flex-wrap:wrap;gap:6px;">
+            <div style="padding:6px 10px;background:#fff;border:1px solid #8B5CF6;border-radius:8px;font-size:11px;font-weight:600;">🧠 Data Scientist<br><span style="font-weight:400;color:#6B7280;">Modèles ML / scoring</span></div>
+            <div style="padding:6px 10px;background:#fff;border:1px solid #3B82F6;border-radius:8px;font-size:11px;font-weight:600;">📊 BI Analyst<br><span style="font-weight:400;color:#6B7280;">Power BI / vues gold</span></div>
+            <div style="padding:6px 10px;background:#fff;border:1px solid #DC2626;border-radius:8px;font-size:11px;font-weight:600;">📈 Grafana<br><span style="font-weight:400;color:#6B7280;">DQ + Volume dashboards</span></div>
+            <div style="padding:6px 10px;background:#fff;border:1px solid #FF694A;border-radius:8px;font-size:11px;font-weight:600;">📚 dbt Docs<br><span style="font-weight:400;color:#6B7280;">Lineage + Catalogue</span></div>
+            <div style="padding:6px 10px;background:#fff;border:1px solid #D4002A;border-radius:8px;font-size:11px;font-weight:600;">🔴 ALTEN UI<br><span style="font-weight:400;color:#6B7280;">React ML Dashboard</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /flow -->
+  </div><!-- /phase-a -->
+
+
+  <!-- ═══════════════════════════════════ PHASE B -->
+  <div class="phase phase-b">
+    <div class="phase-title">
+      <div class="phase-icon" style="background:#FEF3C7;">☁</div>
+      PHASE B — GCP Cloud · Streaming Temps Réel
+      <span style="font-size:11px;font-weight:500;color:#D97706;margin-left:4px;">
+        Kafka · Dataflow · BigQuery · dbt-bigquery · Terraform IAM
+      </span>
+    </div>
+
+    <div class="flow">
+
+      <!-- E-commerce site -->
+      <div class="flow-row">
+        <div class="box box-ecom">
+          <span class="batch-badge" style="background:#DCFCE7;color:#166534;">SOURCE</span>
+          <div class="box-header">
+            <div class="box-icon" style="font-size:16px;">🛒</div>
+            <span class="box-title">Site E-Commerce — Équipe Partenaire</span>
+          </div>
+          <div class="box-body" style="font-size:11px;color:#374151;">
+            Producteur d'événements Kafka · Topics: <code>ecommerce.orders</code>, <code>ecommerce.clicks</code>
+            <br>Connexion vers IP statique de la VM GCP · Port TCP 9092
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down">
+        <span class="arrow-label">STREAM EVENTS · TCP 9092</span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- Kafka VM -->
+      <div class="flow-row">
+        <div class="box box-kafka">
+          <span class="batch-badge" style="background:#F0F0F0;color:#374151;">BROKER</span>
+          <div class="box-header">
+            <div class="box-icon" style="font-size:13px;font-weight:800;background:#D1D5DB;color:#111;">K</div>
+            <span class="box-title">Apache Kafka · Compute Engine VM</span>
+          </div>
+          <div class="box-body">
+            <div class="row-boxes" style="gap:8px;">
+              <div style="flex:1;padding:7px 10px;background:#fff;border:1px solid #E5E7EB;border-radius:8px;font-size:11px;">
+                <div style="font-weight:700;margin-bottom:3px;">VM: pfe-streaming-vm</div>
+                Type: e2-medium · Debian 11<br>
+                IP Statique publique (Terraform)<br>
+                <span class="tag tag-terra">Terraform</span>
+              </div>
+              <div style="flex:1;padding:7px 10px;background:#FFF0F0;border:1px solid #EF4444;border-radius:8px;font-size:11px;">
+                <div style="font-weight:700;color:#DC2626;margin-bottom:3px;">🔥 Firewall VPC</div>
+                Règle: allow-kafka-ingress<br>
+                Port TCP 9092 · 0.0.0.0/0<br>
+                Target tag: <code>kafka-server</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down">
+        <span class="arrow-label">ReadFromKafka · Consumer Group</span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- Dataflow -->
+      <div class="flow-row">
+        <div class="box box-dataflow">
+          <span class="batch-badge" style="background:#FBCFE8;color:#9D174D;">DATAFLOW</span>
+          <div class="box-header">
+            <div class="box-icon" style="font-size:14px;">⚡</div>
+            <span class="box-title">Google Cloud Dataflow</span>
+            <span class="box-subtitle">Apache Beam · Streaming Runner</span>
+          </div>
+          <div class="box-body">
+            <span class="tag tag-beam">Apache Beam Python</span>
+            <span class="tag" style="background:#E8F0FE;color:#1967D2;">Autoscale</span>
+            <span class="tag" style="background:#F3E8FF;color:#7E22CE;">Managed</span>
+            <div style="margin-top:8px;font-size:11px;background:#fff;border:1px solid #E5E7EB;border-radius:6px;padding:7px 10px;">
+              <strong>ReadFromKafka</strong> (IP:9092)
+              <span style="color:#9CA3AF;">→</span>
+              <strong>Windowing</strong> (fenêtres temporelles 5min)
+              <span style="color:#9CA3AF;">→</span>
+              <strong>WriteToBigQuery</strong> (pfe_bronze)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down" style="position:relative;">
+        <span class="arrow-label">WRITE · WriteToBigQuery + Checkpointing</span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- BigQuery + GCS side by side -->
+      <div class="flow-row">
+        <div class="row-boxes">
+          <div class="box box-bq" style="flex:1.6;">
+            <span class="batch-badge" style="background:#E8F0FE;color:#1967D2;">BRONZE</span>
+            <div class="box-header">
+              <div class="box-icon" style="font-size:14px;background:#BFDBFE;">BQ</div>
+              <span class="box-title">BigQuery — pfe_bronze</span>
+            </div>
+            <div class="box-body" style="font-size:11px;">
+              <span class="tag tag-bq">BigQuery</span>
+              <span class="tag" style="background:#E8F4F8;color:#006064;">Dataset pfe_bronze</span>
+              <div style="margin-top:6px;color:#374151;">
+                Landing brut · tables alimentées par Dataflow en continu
+              </div>
+            </div>
+          </div>
+          <div class="box box-gcs" style="flex:1;">
+            <div class="box-header">
+              <div class="box-icon" style="font-size:14px;background:#B2EBF2;">GCS</div>
+              <span class="box-title">GCS Checkpoints</span>
+            </div>
+            <div class="box-body" style="font-size:11px;">
+              <span class="tag tag-gcs">Cloud Storage</span>
+              <div style="margin-top:5px;color:#374151;">
+                pfe-spark-checkpoints-data<br>État streaming · restauration<br>après panne
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down">
+        <span class="arrow-label">TRANSFORM · dbt-bigquery</span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- dbt-bigquery -->
+      <div class="flow-row">
+        <div class="box box-dbt">
+          <span class="batch-badge" style="background:#FFE4DC;color:#9A3412;">TRANSFORM</span>
+          <div class="box-header">
+            <div class="box-icon" style="font-size:14px;">🔴</div>
+            <span class="box-title">dbt-bigquery · Transformations SQL</span>
+          </div>
+          <div class="box-body">
+            <span class="tag tag-dbt">dbt-bigquery</span>
+            <span class="tag tag-bq">BigQuery MPP</span>
+            <div class="sub-zone sub-zone-silver" style="margin-top:8px;">
+              <div class="sub-zone-title" style="color:var(--silver);">⬡ SILVER Cloud</div>
+              <div style="font-size:11px;">PII Hashing · Casts · Normalisation — mêmes règles que Phase A</div>
+            </div>
+            <div class="sub-zone sub-zone-gold" style="margin-top:6px;">
+              <div class="sub-zone-title" style="color:#B45309;">★ GOLD Cloud</div>
+              <div style="font-size:11px;">Star Schema · Bus Matrix · Marts Analytics continus</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down">
+        <span class="arrow-label">ANALYTICS</span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- BigQuery Analytics -->
+      <div class="flow-row">
+        <div class="box box-bq">
+          <div class="box-header">
+            <div class="box-icon" style="font-size:14px;background:#BFDBFE;">BQ</div>
+            <span class="box-title">BigQuery Analytics — Silver + Gold</span>
+            <span class="box-subtitle">Serving Layer Cloud</span>
+          </div>
+          <div class="box-body" style="font-size:11px;">
+            <span class="tag tag-bq">BigQuery</span>
+            <span class="tag" style="background:#FDE68A;color:#92400E;">Gold Streaming</span>
+            <div style="margin-top:6px;color:#374151;">
+              Tables analytiques en continu · disponibles pour les consommateurs cloud
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arrow-down">
+        <span class="arrow-label"></span>
+        <div class="arrow-line"></div>
+      </div>
+
+      <!-- IAM Security -->
+      <div class="flow-row">
+        <div class="box box-iam">
+          <div class="box-header">
+            <div class="box-icon" style="font-size:15px;">🔒</div>
+            <span class="box-title">IAM &amp; Sécurité GCP — Terraform</span>
+          </div>
+          <div class="box-body">
+            <span class="tag tag-terra">Terraform iam.tf</span>
+            <div style="margin-top:8px;font-size:11px;color:#374151;">
+              <div style="padding:5px 8px;background:#fff;border:1px solid #E5E7EB;border-radius:6px;margin-bottom:5px;">
+                <span style="font-weight:700;color:#166534;">Service Account</span>
+                <code style="background:#F0FDF4;padding:1px 5px;border-radius:4px;font-size:10px;margin-left:4px;">sa-spark-streaming</code>
+                <div style="font-size:10px;color:#6B7280;margin-top:2px;">Authentification sans clé JSON (scope cloud-platform)</div>
+              </div>
+              <div class="row-boxes" style="gap:6px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:140px;padding:5px 8px;background:#E8F4F8;border:1px solid #4285F4;border-radius:6px;font-size:10px;">
+                  <div style="font-weight:700;color:#1D4ED8;">roles/bigquery.dataEditor</div>
+                  Insérer / créer tables BigQuery
+                </div>
+                <div style="flex:1;min-width:140px;padding:5px 8px;background:#E8F4F8;border:1px solid #4285F4;border-radius:6px;font-size:10px;">
+                  <div style="font-weight:700;color:#1D4ED8;">roles/bigquery.jobUser</div>
+                  Lancer des jobs d'insertion
+                </div>
+                <div style="flex:1;min-width:140px;padding:5px 8px;background:var(--gcs-bg);border:1px solid #0097A7;border-radius:6px;font-size:10px;">
+                  <div style="font-weight:700;color:#006064;">roles/storage.objectAdmin</div>
+                  R/W checkpoints GCS
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /flow -->
+  </div><!-- /phase-b -->
+
+</div><!-- /phases -->
+
+
+<!-- ══════════════════════════════════════════════════════ CROSS-CUTTING -->
+<div class="cross">
+  <div class="cross-title">
+    <span style="font-size:18px;">⚙</span>
+    CROSS-CUTTING LAYER — Orchestration, Data Quality &amp; Monitoring
+  </div>
+
+  <div class="cross-grid">
+
+    <!-- Airflow DAG -->
+    <div class="dag">
+      <div class="dag-title">
+        <span style="font-size:16px;">🌊</span>
+        Apache Airflow · DAG: e_commerce_platform_industrialized
+        <span style="margin-left:auto;font-size:10px;font-weight:600;background:#DBEAFE;color:#1D4ED8;padding:2px 8px;border-radius:10px;">@daily</span>
+      </div>
+      <div class="dag-flow">
+        <div class="dag-node dag-node-sensor">PostgresHealthSensor</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-sensor">APIHealthSensor</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-ingest">CSV Ingestion</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-ingest">JDBC Ingestion</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-ingest">REST Ingestion</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-dbt">dbt run (Silver)</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-dbt">dbt run (Gold)</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-dbt">gold_exporter.py</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-dbt">batch_scoring</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-dq">dbt test (21 checks)</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-dq">dq_reporter.py</div>
+        <span class="dag-arrow">→</span>
+        <div class="dag-node dag-node-alert">Seuil 90% · Fail-Fast</div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:#374151;padding:8px 10px;background:#fff;border-radius:6px;border:1px solid #BFDBFE;">
+        <strong>Capteurs de sécurité</strong> : PostgresHealthSensor + APIHealthSensor valident la disponibilité des sources avant toute écriture ·
+        <strong>dq_reporter.py</strong> : agrège les 21 tests dbt · génère rapport JSON + Markdown · stocke dans <code>quality.dq_metrics</code> ·
+        Score &lt; 90% → pipeline arrêté pour protéger les consommateurs
+      </div>
+    </div>
+
+    <!-- Monitoring -->
+    <div class="mon-box">
+      <div class="mon-title">📈 Observabilité</div>
+      <div class="mon-item" style="background:#FFFBEB;border-color:#FCD34D;">
+        <div class="dot" style="background:#EF4444;"></div>
+        <div>
+          <div style="font-size:12px;font-weight:700;">Prometheus</div>
+          <div style="font-size:10px;color:#6B7280;">Métriques système + pipeline</div>
+        </div>
+      </div>
+      <div class="mon-item" style="background:#FFF7ED;border-color:#FB923C;">
+        <div class="dot" style="background:#FB923C;"></div>
+        <div>
+          <div style="font-size:12px;font-weight:700;">Grafana Dashboards</div>
+          <div style="font-size:10px;color:#6B7280;">DQ Score · Volume · Infra · Exécutions</div>
+        </div>
+      </div>
+      <div class="mon-item" style="background:#EFF6FF;border-color:#93C5FD;">
+        <div class="dot" style="background:#3B82F6;"></div>
+        <div>
+          <div style="font-size:12px;font-weight:700;">pgAdmin 4</div>
+          <div style="font-size:10px;color:#6B7280;">Administration PostgreSQL DWH</div>
+        </div>
+      </div>
+      <div class="mon-item" style="background:#FFF0ED;border-color:#FDBA74;">
+        <div class="dot" style="background:#FF694A;"></div>
+        <div>
+          <div style="font-size:12px;font-weight:700;">dbt Docs</div>
+          <div style="font-size:10px;color:#6B7280;">Lineage + Catalogue des données</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Quality -->
+    <div class="mon-box">
+      <div class="mon-title">✅ Data Quality</div>
+      <div style="padding:8px 10px;background:#ECFDF5;border:1px solid #10B981;border-radius:8px;margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:700;color:#065F46;margin-bottom:4px;">21 tests dbt</div>
+        <div style="font-size:10px;color:#374151;">
+          Unicité · Intégrité référentielle<br>
+          Contraintes métier · Not-null<br>
+          Valeurs acceptées · Ranges
+        </div>
+      </div>
+      <div style="padding:8px 10px;background:#FEF9C3;border:1px solid #F59E0B;border-radius:8px;margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:700;color:#92400E;margin-bottom:2px;">Seuil d'alerte</div>
+        <div style="font-size:22px;font-weight:800;color:#D97706;font-family:'JetBrains Mono',monospace;">≥ 90%</div>
+        <div style="font-size:10px;color:#374151;">Score global · <code>quality.dq_metrics</code></div>
+      </div>
+      <div style="padding:8px 10px;background:#F0FDF4;border:1px solid #10B981;border-radius:8px;">
+        <div style="font-size:12px;font-weight:700;color:#065F46;margin-bottom:2px;">drift_detector.py</div>
+        <div style="font-size:10px;color:#374151;">PyArrow Schema Registry<br>Fail-Fast sur dérive de schéma</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════ LEGEND -->
+<div class="legend">
+  <div style="font-size:11px;font-weight:700;color:#374151;margin-right:6px;">LÉGENDE :</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#336791;"></div>PostgreSQL</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#EBB000;"></div>DuckDB</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#FF694A;"></div>dbt-core</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#017CEE;"></div>Apache Airflow</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#E84393;"></div>Apache Beam / Dataflow</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1E1E1E;"></div>Apache Kafka</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4285F4;"></div>BigQuery / GCP</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0097A7;"></div>GCS</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#16A34A;"></div>IAM / Sécurité</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7C3AED;"></div>Terraform</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#F59E0B;border-radius:2px;"></div>Bronze Layer</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#64748B;border-radius:2px;"></div>Silver Layer</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#D97706;border-radius:2px;"></div>Gold Layer</div>
+  <div style="margin-left:auto;font-size:10px;color:#9CA3AF;font-family:'JetBrains Mono',monospace;">
+    ALTEN · PFE 2026 · E-Commerce Intelligence Platform
+  </div>
+</div>
+
+</body>
+</html>

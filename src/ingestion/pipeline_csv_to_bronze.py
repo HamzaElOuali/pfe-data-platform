@@ -99,15 +99,14 @@ def run():
             logger.warning(f"SKIP — fichier introuvable : {filepath}")
             continue
 
-        # Nettoyage avant ingestion
         truncate_table(table_name)
-
         logger.info(f"=== Pipeline CSV → Bronze : {table_name} ===")
 
+        # Streaming via FlatMap pour éviter de charger des millions de lignes en mémoire
         with beam.Pipeline(options=options) as p:
             (
                 p
-                | f"Read_{table_name}" >> beam.Create([config])
+                | f"Create_{table_name}" >> beam.Create([config])
                 | f"Parse_{table_name}" >> beam.FlatMap(parse_csv_file)
                 | f"Validate_{table_name}" >> beam.ParDo(
                     ValidateWithGE(
@@ -116,7 +115,7 @@ def run():
                     )
                 )
                 | f"Write_{table_name}" >> beam.ParDo(
-                    WriteToBronze(table_name=table_name)
+                    WriteToBronze(table_name=table_name, batch_size=5000)
                 )
             )
 

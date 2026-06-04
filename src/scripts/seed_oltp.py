@@ -1,73 +1,91 @@
+"""
+Seed postgres_source (OLTP) avec les fichiers CSV.
+Crée les tables avec les types corrects du Schema Registry (int64 → BIGINT, etc.)
+pour que le DriftDetector ne détecte pas de faux drifts.
+"""
 import os
-import pandas as pd
-from sqlalchemy import create_engine, text
+import sys
 import time
+import psycopg2
+from dotenv import load_dotenv
 
-# DB_URL uses port 5434 to avoid conflict with native Windows PostgreSQL
-DB_URL = "postgresql+psycopg2://admin:admin@localhost:5434/oltp_db"
+load_dotenv()
 
-def read_csv_safe(filepath, chunksize=None):
-    """Read a CSV with encoding fallback: utf-8 -> latin-1."""
-    for encoding in ["utf-8", "latin-1"]:
-        try:
-            return pd.read_csv(filepath, encoding=encoding, chunksize=chunksize)
-        except UnicodeDecodeError:
-            continue
-    raise ValueError(f"Cannot decode {filepath} with utf-8 or latin-1")
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..")))
+from src.quality.schema_registry import SCHEMAS, PYARROW_TO_PG
+import pyarrow as pa
+
+
+OLTP_TABLES = ["customers", "orders", "order_items", "order_payments", "order_reviews"]
+
+
+def _connect():
+    return psycopg2.connect(
+        host=os.getenv("POSTGRES_SOURCE_HOST", "localhost"),
+        port=os.getenv("POSTGRES_SOURCE_PORT", "5434"),
+        user=os.getenv("POSTGRES_SOURCE_USER", "admin"),
+        password=os.getenv("POSTGRES_SOURCE_PASSWORD", "admin"),
+        dbname=os.getenv("POSTGRES_SOURCE_DB", "oltp_db"),
+    )
+
+
+def _ddl_for_table(table_name: str) -> str:
+    """Génère le DDL avec les types corrects depuis le Schema Registry."""
+    schema = SCHEMAS[table_name]
+    cols = []
+    for field in schema:
+        pg_type = PYARROW_TO_PG.get(field.type, "TEXT")
+        cols.append(f'    "{field.name}" {pg_type}')
+    return f'CREATE TABLE "{table_name}" (\n' + ",\n".join(cols) + "\n);"
 
 
 def seed_database():
-    print("Connecting to postgres_source...")
-    engine = create_engine(DB_URL)
+    host = os.getenv("POSTGRES_SOURCE_HOST", "localhost")
+    port = os.getenv("POSTGRES_SOURCE_PORT", "5434")
+    print(f"Connecting to postgres_source ({host}:{port})...")
+    conn = _connect()
+    conn.autocommit = False
+    cur = conn.cursor()
+    print("Connected successfully!")
 
-    # Check connection
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        print("Connected successfully!")
-    except Exception as e:
-        print(f"Failed to connect: {e}")
-        return
+    data_dir = os.path.normpath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw", "postgres_source")
+    )
+    print(f"Data directory: {data_dir}\n")
 
-    data_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "raw", "postgres_source")
-    data_dir = os.path.normpath(data_dir)
-    print(f"Data directory: {data_dir}")
-
-    files_to_load = [
-        "customers.csv",
-        "orders.csv",
-        "order_items.csv",
-        "order_payments.csv",
-        "order_reviews.csv",
-    ]
-
-    for file in files_to_load:
-        file_path = os.path.join(data_dir, file)
-        if not os.path.exists(file_path):
-            print(f"SKIP  {file} — not found at {file_path}")
+    for table in OLTP_TABLES:
+        path = os.path.join(data_dir, f"{table}.csv")
+        if not os.path.exists(path):
+            print(f"SKIP  {table} — fichier introuvable : {path}")
             continue
 
-        table_name = file.replace(".csv", "")
-        print(f"Loading {file} -> table '{table_name}' ...")
-
-        chunk_size = 50_000
-        start_time = time.time()
-
+        print(f"Loading {table}.csv ...")
+        start = time.time()
         try:
-            for i, chunk in enumerate(read_csv_safe(file_path, chunksize=chunk_size)):
-                if_exists_behavior = "replace" if i == 0 else "append"
-                chunk.to_sql(table_name, con=DB_URL, if_exists=if_exists_behavior, index=False)
-                rows_so_far = (i + 1) * chunk_size
-                print(f"  ... {rows_so_far:>8} rows written")
+            cur.execute(f'DROP TABLE IF EXISTS "{table}"')
+            ddl = _ddl_for_table(table)
+            cur.execute(ddl)
 
-            elapsed = time.time() - start_time
-            print(f"  OK  {table_name} loaded in {elapsed:.1f}s")
+            with open(path, "r", encoding="utf-8") as f:
+                cur.copy_expert(
+                    f'COPY "{table}" FROM STDIN WITH (FORMAT CSV, HEADER TRUE, ENCODING \'UTF8\', NULL \'\')',
+                    f,
+                )
+
+            conn.commit()
+            cur.execute(f'SELECT COUNT(*) FROM "{table}"')
+            count = cur.fetchone()[0]
+            elapsed = time.time() - start
+            print(f"  OK  {table} — {count:,} rows en {elapsed:.1f}s")
+
         except Exception as e:
-            print(f"  ERR {file}: {e}")
+            conn.rollback()
+            print(f"  ERR {table}: {e}")
 
-    print("\nDatabase seeding completed.")
+    cur.close()
+    conn.close()
+    print("\nDatabase seeding terminé.")
 
 
 if __name__ == "__main__":
     seed_database()
-

@@ -79,7 +79,7 @@ with DAG(
     # 4. Transformation Silver (dbt)
     dbt_run_silver = BashOperator(
         task_id='dbt_run_silver',
-        bash_command='cd /opt/airflow/dbt && dbt --log-path /tmp/dbt_logs run --select silver',
+        bash_command='cd /opt/airflow/dbt && dbt deps --log-path /tmp/dbt_logs && dbt --log-path /tmp/dbt_logs run --select silver',
         on_success_callback=on_success_callback
     )
 
@@ -91,14 +91,14 @@ with DAG(
 
     dq_report_silver = BashOperator(
         task_id='generate_dq_report_silver',
-        bash_command='export PYTHONPATH=/opt/airflow && python -m src.quality.dq_reporter',
+        bash_command='cd /opt/airflow && export PYTHONPATH=/opt/airflow && export DQ_LAYER=silver && python -m src.quality.dq_reporter',
         on_success_callback=on_success_callback
     )
 
     # 6. Transformation Gold (dbt)
     dbt_run_gold = BashOperator(
         task_id='dbt_run_gold',
-        bash_command='cd /opt/airflow/dbt && dbt --log-path /tmp/dbt_logs run --select gold',
+        bash_command='cd /opt/airflow/dbt && dbt deps --quiet && dbt --log-path /tmp/dbt_logs run --select gold',
         on_success_callback=on_success_callback
     )
 
@@ -110,7 +110,7 @@ with DAG(
 
     dq_report_gold = BashOperator(
         task_id='generate_dq_report_gold',
-        bash_command='export PYTHONPATH=/opt/airflow && python -m src.quality.dq_reporter',
+        bash_command='cd /opt/airflow && export PYTHONPATH=/opt/airflow && export DQ_LAYER=gold && python -m src.quality.dq_reporter',
         on_success_callback=on_success_callback
     )
 
@@ -121,8 +121,15 @@ with DAG(
         on_success_callback=on_success_callback
     )
 
+    # 9. Batch Scoring ML (M1 -> M2 -> Règle segmentation -> quality.ml_predictions)
+    batch_scoring = BashOperator(
+        task_id='batch_scoring',
+        bash_command='cd /opt/airflow && export PYTHONPATH=/opt/airflow && python -m src.ml.scoring_pipeline',
+        on_success_callback=on_success_callback
+    )
+
     # Définition des dépendances
     [check_db_source, check_api_source] >> check_drift
     check_drift >> [ingest_csv, ingest_db, ingest_api]
     [ingest_csv, ingest_db, ingest_api] >> dbt_run_silver >> dbt_test_silver >> dq_report_silver
-    dq_report_silver >> dbt_run_gold >> dbt_test_gold >> dq_report_gold >> sync_gold
+    dq_report_silver >> dbt_run_gold >> dbt_test_gold >> dq_report_gold >> sync_gold >> batch_scoring

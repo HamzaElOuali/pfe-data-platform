@@ -1,7 +1,11 @@
 FROM python:3.11-slim
 
-RUN pip install --no-cache-dir dbt-core dbt-duckdb
-
 WORKDIR /dbt
+ENV DBT_PROFILES_DIR=/dbt
 
-CMD ["bash", "-c", "dbt docs generate --project-dir /dbt --profiles-dir /dbt && dbt docs serve --host 0.0.0.0 --port 8080 --project-dir /dbt --profiles-dir /dbt --no-browser"]
+COPY dbt/ /dbt/
+
+RUN apt-get update && apt-get install -y --no-install-recommends git && pip install --no-cache-dir dbt-core dbt-duckdb && dbt deps && rm -rf /var/lib/apt/lists/*
+
+# Génère docs sans connexion DB (lineage via manifest.json, pas de catalog)
+CMD ["bash","-c","printf 'ecommerce_platform:\\n  target: docs\\n  outputs:\\n    docs:\\n      type: duckdb\\n      path: /tmp/docs.duckdb\\n      threads: 1\\n' > /dbt/profiles.yml && dbt docs generate --project-dir /dbt --profiles-dir /dbt --empty-catalog && dbt docs serve --host 0.0.0.0 --port 8080 --project-dir /dbt --profiles-dir /dbt --no-browser"]
