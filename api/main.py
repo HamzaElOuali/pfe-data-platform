@@ -267,8 +267,8 @@ class RecommendRequest(BaseModel):
 
 @app.post("/recommend")
 async def recommend(request: RecommendRequest):
-    """Genere 3 recommandations contextuelles via Mistral 7B (OpenRouter).
-    Retourne le fallback statique en cas d'erreur ou si la cle API est absente."""
+    """Genere 3 recommandations contextuelles via LLM (OpenRouter).
+    Retourne source='ai' si generees par le LLM, source='fallback' sinon."""
     scoring_context = request.model_dump()
-    recommendations = await get_ai_recommendations(scoring_context)
-    return {"recommendations": recommendations}
+    recommendations, source = await get_ai_recommendations(scoring_context)
+    return {"recommendations": recommendations, "source": source}

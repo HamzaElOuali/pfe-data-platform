@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { getHealth } from '../api'
 
 const SERVICES = [
-  { name: 'Apache Airflow', desc: 'Orchestration',  url: 'http://localhost:8080' },
+  { name: 'Apache Airflow', desc: 'Orchestration',  url: 'http://localhost:8080/dags/e-commerce_platform_industrialized/grid' },
   { name: 'dbt Docs',       desc: 'Data Catalog',   url: 'http://localhost:8085' },
-  { name: 'Grafana',        desc: 'Observability',  url: 'http://localhost:3000' },
+  { name: 'Grafana',        desc: 'Observability',  url: 'http://localhost:3000/d/dq_pfe_platform/pfe-data-platform-3a-observability?orgId=1&from=now-7d&to=now&timezone=browser&refresh=30s' },
   { name: 'pgAdmin',        desc: 'Database Admin', url: 'http://localhost:5050' },
-  { name: 'FastAPI Mock',   desc: 'Prediction API', url: 'http://localhost:8090' },
+  { name: 'FastAPI Mock',   desc: 'Prediction API', url: 'http://localhost:8090/docs' },
 ]
 
 const MODEL_REGISTRY = [

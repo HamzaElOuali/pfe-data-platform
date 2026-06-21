@@ -7,9 +7,9 @@ datasources:
     uid: 'postgres_dwh_uid'
     url: postgres_dwh:5432
     database: dwh_db
-    user: admin
+    user: ${POSTGRES_DWH_USER}
     secureJsonData:
-      password: admin
+      password: ${POSTGRES_DWH_PASSWORD}
     jsonData:
       sslmode: 'disable'
       postgresVersion: 15

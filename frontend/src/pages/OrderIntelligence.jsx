@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { predict, getRecommendations } from '../api'
 import RiskGauge from '../components/RiskGauge'
 
@@ -7,14 +7,18 @@ const MONTHS = ['January','February','March','April','May','June',
 const DAYS   = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
 
 const SEG_COLORS = { VIP: '#059669', Loyal: '#0089CF', 'At Risk': '#D97706', Lost: '#DC2626' }
-const SEG_DESCS  = {
-  VIP:      'Top-tier customer — priority retention & exclusive offers',
-  Loyal:    'Engaged customer — cross-sell opportunities, maintain momentum',
-  'At Risk':'Negative satisfaction signal detected — immediate intervention required',
-  Lost:     'Disengaged & low-value — evaluate reactivation campaign',
+
+const SEG_DESCS = {
+  VIP:
+    'High-value customer with a proven purchase history. Eligible for priority courier upgrades and exclusive loyalty benefits.',
+  Loyal:
+    'Consistent buyer with positive engagement signals. Strong candidate for cross-sell campaigns and reward-tier advancement.',
+  'At Risk':
+    'Satisfaction indicators are trending negative with elevated churn probability. Immediate personalized outreach is critical.',
+  Lost:
+    'Low engagement and declining order value detected. A targeted reactivation offer within 30 days is strongly advised.',
 }
 
-/* Static fallback — used when AI call fails or hasn't resolved yet */
 function getActions(delay, riskLevel, segment) {
   const a = []
   if (riskLevel === 'High' || delay > 20) {
@@ -32,11 +36,31 @@ function getActions(delay, riskLevel, segment) {
   return a
 }
 
-/* Map segment/risk to action urgency class for AI recommendations */
 function urgencyFromContext(riskLevel, segment) {
   if (riskLevel === 'High' || segment === 'At Risk' || segment === 'Lost') return 'urgent'
   if (riskLevel === 'Medium') return 'warn'
   return 'ok'
+}
+
+/* Smooth count-up from 0 to target, resets whenever target changes */
+function useCountUp(target, duration = 1100) {
+  const [displayed, setDisplayed] = useState(0)
+  const frameRef = useRef(null)
+  useEffect(() => {
+    if (target == null) { setDisplayed(0); return }
+    if (frameRef.current) cancelAnimationFrame(frameRef.current)
+    const start = performance.now()
+    const tick = (now) => {
+      const t = Math.min((now - start) / duration, 1)
+      const eased = 1 - (1 - t) ** 3          // ease-out cubic
+      setDisplayed(target * eased)
+      if (t < 1) frameRef.current = requestAnimationFrame(tick)
+      else setDisplayed(target)
+    }
+    frameRef.current = requestAnimationFrame(tick)
+    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current) }
+  }, [target, duration])
+  return displayed
 }
 
 export default function OrderIntelligence() {
@@ -48,19 +72,21 @@ export default function OrderIntelligence() {
   const [result,    setResult]    = useState(null)
   const [error,     setError]     = useState(null)
   const [loading,   setLoading]   = useState(false)
-  const [aiRecs,    setAiRecs]    = useState(null)   // null = not fetched, [...] = loaded
+  const [aiRecs,    setAiRecs]    = useState(null)
+  const [aiSource,  setAiSource]  = useState(null)   // "ai" | "fallback" | null
   const [aiLoading, setAiLoading] = useState(false)
+  const [resultKey, setResultKey] = useState(0)       // flip to restart all card animations
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true); setError(null); setAiRecs(null)
+    setLoading(true); setError(null); setAiRecs(null); setAiSource(null)
     try {
       const mlResult = await predict(form)
       setResult(mlResult)
+      setResultKey(k => k + 1)
 
-      // Fetch AI recommendations asynchronously after ML scoring
       setAiLoading(true)
       getRecommendations({
         predicted_delay_days: mlResult.predicted_delay_days,
@@ -71,8 +97,11 @@ export default function OrderIntelligence() {
         review_score:         form.review_score,
         order_month:          form.order_month,
       })
-        .then(data => setAiRecs(data.recommendations))
-        .catch(() => setAiRecs(null))   // silently fall back to static
+        .then(data => {
+          setAiRecs(data.recommendations)
+          setAiSource(data.source ?? 'fallback')
+        })
+        .catch(() => { setAiRecs(null); setAiSource(null) })
         .finally(() => setAiLoading(false))
 
     } catch (err) {
@@ -89,17 +118,19 @@ export default function OrderIntelligence() {
   const conf  = result?.confidence_score
   const ts    = result?.scored_at?.slice(0, 19)
 
+  const animDelay = useCountUp(delay ?? null, 1100)
+  const animConf  = useCountUp(conf  != null ? conf * 100 : null, 900)
+
   const delayColor = !delay ? 'var(--text)' : delay < 10 ? '#059669' : delay < 20 ? '#D97706' : '#DC2626'
   const delayPct   = Math.min(((delay || 0) / 30) * 100, 100)
   const fbColor    = form.review_score <= 2 ? '#DC2626' : form.review_score <= 3 ? '#D97706' : '#059669'
 
-  /* Determine what to render in Recommended Actions */
   const staticActions = result ? getActions(delay, rl, seg) : []
-  const aiUrgency = urgencyFromContext(rl, seg)
+  const aiUrgency     = urgencyFromContext(rl, seg)
+  const showAiBadge   = aiRecs && !aiLoading && aiSource === 'ai'
 
   return (
     <div>
-      {/* Page header */}
       <div className="mb6">
         <h1>Order Intelligence</h1>
         <p className="ts tm mt3">ML cascade scoring pipeline · Delivery · Risk · Segment</p>
@@ -191,12 +222,14 @@ export default function OrderIntelligence() {
           {error && <div className="err-card mb4"><strong>Pipeline Error:</strong> {error}</div>}
 
           {result ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            /* key=resultKey remounts this subtree → all CSS animations restart */
+            <div key={resultKey} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
               {/* Metrics row */}
               <div className="g3">
-                {/* Delivery */}
-                <div className="card">
+
+                {/* ── Delivery Forecast ── */}
+                <div className="card card-enter" style={{ '--enter-delay': '0s' }}>
                   <div style={{
                     height: 3, background: delayColor, borderRadius: '12px 12px 0 0',
                     margin: '-24px -24px 20px',
@@ -204,51 +237,57 @@ export default function OrderIntelligence() {
                   <div className="section-label" style={{ marginTop: 0, marginBottom: 10 }}>
                     Delivery Forecast
                   </div>
-                  <div className="kpi-num" style={{ color: delayColor }}>
-                    {delay?.toFixed(1)}<span className="kpi-unit">days</span>
+                  <div className="kpi-num kpi-enter" style={{ color: delayColor }}>
+                    {animDelay.toFixed(1)}<span className="kpi-unit">days</span>
                   </div>
-                  <div className="prog-track">
+                  <div className="prog-track" style={{ marginTop: 10 }}>
                     <div className="prog-fill" style={{ width: `${delayPct}%`, background: delayColor }} />
                   </div>
                   <div className="mt3" style={{
                     fontSize: 11, color: 'var(--text3)',
                     fontFamily: 'JetBrains Mono, monospace',
                   }}>
-                    confidence {((conf || 0) * 100).toFixed(0)}%
+                    confidence {animConf.toFixed(0)}%
                   </div>
                 </div>
 
-                {/* Risk gauge */}
-                <div className="card" style={{
+                {/* ── Risk Gauge ── */}
+                <div className="card card-enter" style={{
+                  '--enter-delay': '0.1s',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <RiskGauge riskProba={rp} riskLevel={rl} size={152} />
                 </div>
 
-                {/* Segment */}
-                <div className="card" style={{
+                {/* ── Customer Segment ── */}
+                <div className="card card-enter" style={{
+                  '--enter-delay': '0.2s',
                   textAlign: 'center',
                   borderTop: `3px solid ${SEG_COLORS[seg] || 'var(--border)'}`,
                 }}>
                   <div className="section-label" style={{ marginTop: 0 }}>Customer Segment</div>
-                  <div style={{
-                    fontSize: 22, fontWeight: 700, marginBottom: 8,
+                  <div className="seg-name-enter" style={{
+                    fontSize: 22, fontWeight: 700, marginBottom: 10,
                     color: SEG_COLORS[seg],
-                  }}>{seg}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
+                  }}>
+                    {seg}
+                  </div>
+                  <div style={{
+                    fontSize: 12, color: 'var(--text2)', lineHeight: 1.75,
+                    textAlign: 'left',
+                  }}>
                     {SEG_DESCS[seg]}
                   </div>
                 </div>
               </div>
 
-              {/* ── Recommended Actions ──────────────────────────── */}
-              <div className="card">
+              {/* ── Recommended Actions ── */}
+              <div className="card card-enter" style={{ '--enter-delay': '0.28s' }}>
                 <div className="card-accent" />
 
-                {/* Title + AI badge */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                   <h3 style={{ margin: 0 }}>Recommended Actions</h3>
-                  {aiRecs && !aiLoading && (
+                  {showAiBadge && (
                     <span style={{
                       fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
                       textTransform: 'uppercase',
@@ -261,7 +300,6 @@ export default function OrderIntelligence() {
                   )}
                 </div>
 
-                {/* Loading state */}
                 {aiLoading && (
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 10,
@@ -276,30 +314,22 @@ export default function OrderIntelligence() {
                   </div>
                 )}
 
-                {/* AI recommendations */}
                 {!aiLoading && aiRecs && aiRecs.map((rec, i) => (
-                  <div key={i} className={`action-item ${aiUrgency}`}>
+                  <div key={i} className={`action-item ${aiUrgency} action-enter`}
+                    style={{ animationDelay: `${0.32 + i * 0.09}s` }}>
                     <div className={`action-dot ${aiUrgency}`} />
                     <span>{rec}</span>
                   </div>
                 ))}
 
-                {/* Static fallback — shown when AI not loaded or failed */}
                 {!aiLoading && !aiRecs && staticActions.map((a, i) => (
-                  <div key={i} className={`action-item ${a.u}`}>
+                  <div key={i} className={`action-item ${a.u} action-enter`}
+                    style={{ animationDelay: `${0.32 + i * 0.09}s` }}>
                     <div className={`action-dot ${a.u}`} />
                     <span>{a.t}</span>
                   </div>
                 ))}
 
-                <div style={{
-                  marginTop: 14, paddingTop: 12,
-                  borderTop: '1px solid var(--border)',
-                  display: 'flex', gap: 24, flexWrap: 'wrap',
-                }}>
-                  <span className="info-key">scored_at · {ts}</span>
-                  <span className="info-key">risk_proba · {rp?.toFixed(4)}</span>
-                </div>
               </div>
             </div>
 

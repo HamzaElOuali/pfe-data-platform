@@ -32,13 +32,13 @@ export default function Layout({ page, setPage, children }) {
             <div style={{ width: 1, height: 28, background: 'var(--border)' }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', letterSpacing: '-.01em' }}>
-                Data Intelligence Platform
+                ECDP — E-Commerce Data Platform
               </div>
               <div style={{
                 fontSize: 10, color: 'var(--text3)',
                 fontFamily: 'JetBrains Mono, monospace', marginTop: 1,
               }}>
-                ML Scoring · E-Commerce Analytics
+                Transforming E-Commerce Data into Business Insights
               </div>
             </div>
           </div>
@@ -112,7 +112,7 @@ export default function Layout({ page, setPage, children }) {
           fontSize: 11, color: 'var(--text3)',
           fontFamily: 'JetBrains Mono, monospace',
         }}>
-          ALTEN Data Intelligence Platform · PFE 2026 · v3.0.0
+          ECDP — E-Commerce Data Platform · PFE 2026 · v3.0.0
         </span>
       </footer>
     </div>

@@ -253,3 +253,46 @@ h3 { font-size: 15px; font-weight: 600; }
 .seg-chart-anim {
   animation: fade-in 0.6s ease both;
 }
+
+/* ─── Order Intelligence — result animations ─── */
+@keyframes oi-slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes oi-kpi-pop {
+  0%   { opacity: 0; transform: scale(0.78); }
+  65%  { transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes oi-seg-name {
+  0%   { opacity: 0; letter-spacing: .25em; }
+  100% { opacity: 1; letter-spacing: normal; }
+}
+@keyframes oi-action-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Card enters from below, staggered via --enter-delay */
+.card-enter {
+  animation: oi-slide-up 0.42s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation-delay: var(--enter-delay, 0s);
+}
+
+/* KPI number pops in with overshoot */
+.kpi-enter {
+  display: inline-block;
+  animation: oi-kpi-pop 0.52s cubic-bezier(0.34, 1.46, 0.64, 1) both;
+  animation-delay: 0.18s;
+}
+
+/* Segment name spreads from compressed letters */
+.seg-name-enter {
+  animation: oi-seg-name 0.55s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation-delay: 0.22s;
+}
+
+/* Action rows slide in from the left, staggered via inline animationDelay */
+.action-enter {
+  animation: oi-action-in 0.32s ease both;
+}

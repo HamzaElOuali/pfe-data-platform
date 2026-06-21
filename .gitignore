@@ -121,6 +121,11 @@ frontend/dist/
 docker/pgadmin/pgpass
 
 # ══════════════════════════════════════════════════
+# Airflow — config locale générée automatiquement
+# ══════════════════════════════════════════════════
+airflow.cfg
+
+# ══════════════════════════════════════════════════
 # Scripts de débogage temporaires
 # ══════════════════════════════════════════════════
 _check_duck.py

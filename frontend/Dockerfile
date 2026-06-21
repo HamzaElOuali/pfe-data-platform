@@ -1,7 +1,8 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm config set strict-ssl false && \
+    npm install
 COPY . .
 ARG VITE_API_URL=http://localhost:8090
 ENV VITE_API_URL=$VITE_API_URL
